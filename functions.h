@@ -120,14 +120,14 @@ int parcourirUniteSelect(Unite **tab, int length);
   / indice : indice de l'unite que l'on veut enlever
   / length : taille du tableau
 */
-int enleverSelect(Unite **tab, size_t indice, size_t length);
+int enleverTab(void *tab, size_t indice, size_t length, size_t size);
 
 /*Decale les Unite* selectionnables vers size_t debut.
   / tab : tableau des Unite* selectionnables
   / debut : indice vers laquelle les Unite* suivantes sont déplacées
   / length : taille du tableau
 */
-void decaleSelect(Unite **tab, size_t debut, size_t length);
+void decaleTab(void *tab, size_t debut, size_t length, size_t size);
 /*Unite *parcourirUnites(UListe uliste); BACKUP*/
 
 /*Affiche dans la console les informations sur l'Unite.
@@ -139,7 +139,7 @@ void afficherUnite(Unite unite);
   / unite : pointeur vers l'Unite qui fait l'action
   / monde : pointeur vers le Monde dans lequel se trouve l'Unite
 */
-void actionUnite(Unite *unite, Monde *monde);
+int actionUnite(Unite *unite, Monde *monde, int *mouvements);
 
 /*Libère l'allocation mémoire de Monde et de certains de ses attributs.
   / monde : pointeur vers le Monde que l'on veut libérer
@@ -187,5 +187,33 @@ void initialiseUnite(Unite* unite, Genre genre, Couleur couleur, int nTour);
 void initialiseStats(Unite *unite, Genre genre);
 
 int rand_a_b(int a, int b);
+
+int nombreGenre(UListe uliste, Genre genre);
+
+int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements);
+
+Coord *findWay(Coord depart, Coord dest, Monde monde);
+
+int nbDeplacement(Coord depart, Coord dest);
+
+int nCoordTab(Coord *tab);
+
+int executePath(Unite *unite, Coord *tab, Monde *monde);
+
+int signe(int a);
+
+int initialiseTab(Coord **tab, size_t lengthX, size_t lengthY);
+
+void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX, int pasY, Monde monde, int lengthY);
+
+Coord *goodWay(Coord **tab, int lengthX, int lengthY);
+
+int min(int a, int b);
+
+int max(int a, int b);
+
+void initialiseTabCoord(Coord *tab, size_t length);
+
+void actionDeplacer(Unite *unite, Monde *monde, int *mouvements);
 
 #endif /* FUNCTIONS_H_INCLUDED */

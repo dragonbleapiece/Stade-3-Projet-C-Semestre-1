@@ -18,7 +18,7 @@
 typedef enum Genre {
   SERF = 's',
   GUERRIER = 'g',
-  MATRIARCHE = 'm',
+  MATRIARCHE = 'M',
   ASSASSIN = 'a',
   ARCHER = 'c',
   BARDE = 'b',
@@ -38,7 +38,8 @@ typedef enum Couleur {
 typedef enum Etat {
   PARALYSIE = 'p', /*passe un tour*/
   DEFAUT = 'd', /*par défaut*/
-  EVOLUTION = 'e' /*montée de classe*/
+  EVOLUTION = 'e', /*montée de classe*/
+  ATTENTE = 'a' /*ordre d'attente*/
 } Etat;
 
 typedef struct Unite {
@@ -50,10 +51,15 @@ typedef struct Unite {
     int subis; /*nombre d'attaques subis*/
     int PVmax, B_PVmax, PV, B_att, att, portee, B_portee;
     Etat etat;
-    int evoSpe; /*indice pour toute évolution aux conditions spéciales*/
+    int evo; /*indice pour toute évolution*/
     struct Unite *suiv;
 
 } Unite;
+
+typedef struct Coord {
+  int x;
+  int y;
+} Coord;
 
 /*J'ai changé le Uliste, car chaque liste a une couleur. Lorsqu'une unité rentre dans une liste, il prend immédiatement la couleur de cette liste*/
 typedef struct UListe{

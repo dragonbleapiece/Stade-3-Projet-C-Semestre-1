@@ -59,7 +59,7 @@ void initialiseUnite(Unite* unite, Genre genre, Couleur couleur, int nTour) {
   unite->posY = -1;
   unite->kills = 0;
   unite->subis = 0;
-  unite->evoSpe = 0;
+  unite->evo = 0;
   unite->tour = nTour;
   initialiseStats(unite, genre);
 }
@@ -257,7 +257,10 @@ void ligne() {
 }
 
 int deplacerUnite(Unite *unite, Monde *monde, int destX, int destY){
-    if(monde->plateau[destY][destX] == NULL && destX <= LONG && destY <= LARG && abs(destX-(unite->posX))<=1 && abs(destY-(unite->posY))<=1 ) /* On verifie que la destination existe et est vide et que c'est un déplacement adjacent */
+  if(monde->plateau[destY][destX] == NULL) {
+    if(destX <= LARG
+      && destY <= LONG
+      && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= 1)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
     {
                     monde->plateau[unite->posY][unite->posX]=NULL;
                     unite->posX = destX;
@@ -267,7 +270,178 @@ int deplacerUnite(Unite *unite, Monde *monde, int destX, int destY){
     } else {
       return 0;
     }
+  } else {
+    return -1;
+  }
 
+}
+
+int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements) {
+    if(destX <= LARG
+      && destY <= LONG
+      && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= *mouvements)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
+    {
+      printf("Deplacement\n");
+      Coord depart, dest;
+      Coord *tab;
+      int r;
+      depart.x = unite->posX;
+      depart.y = unite->posY;
+      dest.x = destX;
+      dest.y = destY;
+      tab = findWay(depart, dest, *monde);
+      if(tab == NULL) {
+        return 2;
+      }
+      r = executePath(unite, tab, monde);
+      if(r != 0) {
+        *mouvements -= nCoordTab(tab) - 1; /*Ne compte pas la position de départ du chemin*/
+      }
+      /*Deplacement reussi même si la destination donnee n'a pas ete atteinte*/
+      free(tab);
+
+      return r;
+
+    } else {
+      return 0;
+    }
+}
+
+/*ne pas oublier de libérer avec free*/
+Coord *findWay(Coord depart, Coord dest, Monde monde) {
+  int lengthX = nbDeplacement(depart, dest) + 2;
+  int lengthY;
+  if(depart.x == dest.x || depart.y == dest.y) {
+    lengthY = 1; /*un seul chemin possible*/
+  } else {
+    lengthY = (min(abs(depart.x - dest.x) + 1, abs(depart.y - dest.y) + 1) - 1) * max(abs(depart.x - dest.x) + 1, abs(depart.y - dest.y) + 1);
+  }
+  printf("nombre de chemins %d\n", lengthY);
+  Coord **tab = calloc(lengthY, sizeof(*tab));
+  Coord *g;
+
+  int pasX = signe(dest.x - depart.x);
+  int pasY = signe(dest.y - depart.y);
+
+  if(tab != NULL) {
+    if(initialiseTab(tab, lengthX, lengthY) == 0) {
+      return NULL;
+    }
+
+    printf("findWay\n");
+    construireTab(tab, depart, dest, 0, 0, pasX, pasY, monde, lengthY);
+    g = goodWay(tab, lengthX, lengthY);
+    free(tab);
+
+    return g;
+  }
+
+  return NULL;
+}
+
+/*ne pas oublier de libérer avec free*/
+int initialiseTab(Coord **tab, size_t lengthX, size_t lengthY) {
+  size_t i;
+  for(i = 0; i < lengthY; ++i) {
+    tab[i] = calloc(lengthX, sizeof(**tab));
+    if(tab[i] == NULL) {
+      return 0;
+    }
+    initialiseTabCoord(tab[i], lengthX);
+  }
+
+  return 1;
+}
+
+void initialiseTabCoord(Coord *tab, size_t length) {
+  size_t i;
+  for(i = 0; i < length; ++i) {
+    tab[i].x = -1;
+    tab[i].y = -1;
+  }
+}
+
+void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX, int pasY, Monde monde, int lengthY) {
+  Coord coord = debut;
+  int indice;
+  printf("%d %d = %d,%d\n", i, j, coord.x, coord.y);
+  for(indice = j; indice < lengthY; ++indice) {
+    tab[j][i] = coord;
+  }
+  if(!(monde.plateau[coord.y + pasY][coord.x] != NULL && monde.plateau[coord.y][coord.x + pasX] != NULL)) {
+
+    if(coord.x != dest.x && monde.plateau[coord.y][coord.x + pasX] == NULL) {
+      coord.x += pasX;
+      construireTab(tab, coord, dest, i + 1, j, pasX, pasY, monde, lengthY);
+      coord.x = debut.x; /*revient à la valeur initiale*/
+      j++;
+    }
+    if(coord.y != dest.y && monde.plateau[coord.y + pasY][coord.x] == NULL) {
+      coord.y += pasY;
+      construireTab(tab, coord, dest, i + 1, j, pasX, pasY, monde, lengthY);
+    }
+  }
+
+}
+
+Coord *goodWay(Coord **tab, int lengthX, int lengthY) {
+  printf("GoodWay\n");
+  int i, j;
+  i = 1;
+  while(i < lengthX && lengthY > 1) {
+    j = 0;
+    while(j < lengthY) {
+      if(tab[j][i].x == -1) {
+        free(tab[j]);
+        lengthY = enleverTab(tab, j, lengthY, sizeof(*tab));
+      }
+      ++j;
+    }
+    ++i;
+  }
+
+  return *tab;
+}
+
+int min(int a, int b) {
+  return (a < b) ? a : b;
+}
+
+int max(int a, int b) {
+  return (a > b) ? a : b;
+}
+
+int nbDeplacement(Coord depart, Coord dest) {
+  return (abs(depart.x - dest.x) + abs(depart.y - dest.y));
+}
+
+int nCoordTab(Coord *tab) {
+  int n = 0;
+  while(tab[n].x != -1 && tab[n].y != -1) {
+    ++n;
+  }
+  return n;
+}
+
+int executePath(Unite *unite, Coord *tab, Monde *monde) {
+  int length = nCoordTab(tab);
+  int i = 1;
+  int r;
+  while(i < length && (r = deplacerUnite(unite, monde, tab[i].x, tab[i].y)) == 1) {
+    printf("%d, %d\n", tab[i].x, tab[i].y);
+    ++i;
+  }
+  return r;
+}
+
+int signe(int a) {
+  if(a > 0) {
+    return 1;
+  } else if(a == 0) {
+    return 0;
+  } else {
+    return -1;
+  }
 }
 
 void enleverUnite(Unite *unite, Monde *monde) {
@@ -310,19 +484,27 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   UListe uliste = *getUListe(couleur, monde);
   int nUnite = nombreUnite(uliste);
   Unite **uniteSelect = creerSelection(uliste);
+  int mouvements = nombreGenre(uliste, SERF) + 1;
+  int action;
 
   if(nUnite) {
     affichePlateau(*monde);
     printf("Tour : %d | Joueur : %c\n", monde->tour, couleur);
     do {
+      printf("Points de mouvement : %d\n", mouvements);
       selection = parcourirUniteSelect(uniteSelect, nUnite);
-      if(selection != -1) {
-        actionUnite(uniteSelect[selection], monde);
-        nUnite = enleverSelect(uniteSelect, selection, nUnite);
+      if(selection > -1 && mouvements > 0) {
+        action = actionUnite(uniteSelect[selection], monde, &mouvements);
+        if(action == 4 || action == 3) {
+          nUnite = enleverTab(uniteSelect, selection, nUnite, sizeof(*uniteSelect));
+        }
         affichePlateau(*monde);
         printf("Voulez-vous arreter votre tour ? (o/n)\n");
         scanf(" %c", &cmd);
       } else {
+        if(mouvements <= 0) {
+          printf("Vous n'avez plus aucun ordre à donner.\n");
+        }
         printf("Arret du tour !\n");
         cmd = 'o';
       }
@@ -356,6 +538,21 @@ int nombreUnite(UListe uliste) {
   return n;
 }
 
+int nombreGenre(UListe uliste, Genre genre) {
+  Unite *unite;
+  int n = 0;
+  unite = uliste.unites;
+  if(unite != NULL) {
+    n += (unite->genre == genre);
+    while(unite->suiv != NULL) {
+      unite = (unite->suiv);
+      n += (unite->genre == genre);
+    }
+  }
+
+  return n;
+}
+
 int parcourirUniteSelect(Unite **tab, int length) {
   char cmd = 'n';
   int i = -1;
@@ -380,17 +577,23 @@ int parcourirUniteSelect(Unite **tab, int length) {
   return i;
 }
 
-int enleverSelect(Unite **tab, size_t indice, size_t length) {
+
+/*fonction générale*/
+int enleverTab(void *tab, size_t indice, size_t length, size_t size) {
   if(indice < length - 1) {
-    decaleSelect(tab, indice, length);
+    decaleTab(tab, indice, length, size);
   }
   return (length - 1);
 }
 
-void decaleSelect(Unite **tab, size_t debut, size_t length) {
-  size_t i;
-  for(i = debut; i < length - 1; ++i) {
-    tab[i] = tab[i + 1];
+void decaleTab(void *tab, size_t debut, size_t length, size_t size) {
+  size_t j;
+  char *p;
+  char *pend = (char *)tab + (length - 1) * size;
+  for(p = (char *)tab + debut * size; p < pend; p += size) {
+    for(j = 0; j < size; ++j) {
+      *(p + j) = *(p + size + j);
+    }
   }
 }
 
@@ -415,21 +618,60 @@ Unite *parcourirUnites(UListe uliste) {
   return selection;
 }*/
 
-void actionUnite(Unite *unite, Monde *monde) {
+int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   char c[MAXCHAR];
+  int r;
   printf("Que voulez-vous faire ?\n");
-  printf("deplacer | attaquer | attendre\n");
+  printf("deplacer | attaquer | attendre | evoluer\n");
   scanf(" %s", c);
   if(strcmp("deplacer", c) == 0) {
-    int posX, posY;
-    printf("Indiquer positions x,y : ");
-    scanf("%d,%d", &posX, &posY);
-    deplacerUnite(unite, monde, posX, posY);
+
+    actionDeplacer(unite, monde, mouvements);
+    r = 1;
+
   } else if(strcmp("attaquer", c) == 0) {
+
     int posX, posY;
     printf("Indiquer positions x,y : ");
     scanf("%d,%d", &posX, &posY);
     attaquer(unite, monde, posX, posY);
+    r = 2;
+
+  } else if(strcmp("attendre", c) == 0) {
+
+    r = 3;
+
+  } else if(strcmp("evoluer", c) == 0) {
+
+    r = 4;
+
+  } else {
+
+    printf("Retour !\n");
+    r = 0;
+
+  }
+
+  return r;
+}
+
+void actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
+  int posX, posY;
+  printf("Indiquer positions x,y : ");
+  scanf("%d,%d", &posX, &posY);
+  switch(deplacerUniteAuto(unite, monde, posX, posY, mouvements)) {
+    case(-1):
+      printf("Obstacle rencontre !\n");
+      break;
+    case(0):
+      printf("Erreur dans le deplacement !\n");
+      break;
+    case(1):
+      printf("Deplacement reussi !\n");
+      break;
+    case(2):
+      printf("Erreur mémoire !\n");
+      break;
   }
 }
 
@@ -528,12 +770,12 @@ void placementParJoueur(Monde *monde, Couleur couleur){
     printf("Ou voulez-vous positionner vos deux serfs ? \n ");
     placerUnite(monde,uliste,SERF);
     placerUnite(monde,uliste,SERF);
-    printf(" Placez vos guerriers. \n");
+    /*printf(" Placez vos guerriers. \n");
     placerUnite(monde,uliste,GUERRIER);
     placerUnite(monde,uliste,GUERRIER);
     placerUnite(monde,uliste,GUERRIER);
     printf(" Placez votre Matriarche. \n");
-    placerUnite(monde,uliste,MATRIARCHE);
+    placerUnite(monde,uliste,MATRIARCHE);*/
 }
 
 void placementInitial(Monde *monde){
