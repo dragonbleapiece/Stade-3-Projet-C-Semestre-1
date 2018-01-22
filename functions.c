@@ -452,17 +452,17 @@ int signe(int a) {
   }
 }
 
-void enleverUnite(Unite *unite, Monde *monde) {
-  UListe *uliste = getUListe(unite->couleur, monde);
-  Unite *unitePrec = getUnitePrec(unite, uliste);
-  if(unitePrec == unite) {
-    uliste->unites = unite->suiv;
+void enleverUnite(Unite **unite, Monde *monde) {
+  UListe *uliste = getUListe((*unite)->couleur, monde);
+  Unite *unitePrec = getUnitePrec(*unite, uliste);
+  if(unitePrec == *unite) {
+    uliste->unites = (*unite)->suiv;
   } else if(unitePrec != NULL) {
-    unitePrec->suiv = unite->suiv;
+    unitePrec->suiv = (*unite)->suiv;
   }
-  monde->plateau[unite->posY][unite->posX] = NULL;
-  free(unite);
-  unite = NULL; /*prévient de bugs*/
+  monde->plateau[(*unite)->posY][(*unite)->posX] = NULL;
+  free(*unite);
+  *unite = NULL;
 }
 
 UListe *getUListe(Couleur couleur, Monde *monde) {
@@ -501,9 +501,9 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
     printf("Tour : %d | Joueur : %c\n", monde->tour, couleur);
     do {
       printf("Points de mouvement : %d\n", mouvements);
-      selection = parcourirUniteSelect(uniteSelect, nUnite);
+      selection = parcourirUniteSelect(uniteSelect, &nUnite);
       if(selection > -1 && mouvements > 0) {
-        action = actionUnite(uniteSelect[selection], monde, &mouvements);
+        action = actionUnite(&(uniteSelect[selection]), monde, &mouvements);
         if(action == 4 || action == 3) {
           nUnite = enleverTab(uniteSelect, selection, nUnite, sizeof(*uniteSelect));
         }
@@ -564,25 +564,29 @@ int nombreGenre(UListe uliste, Genre genre) {
   return n;
 }
 
-int parcourirUniteSelect(Unite **tab, int length) {
+int parcourirUniteSelect(Unite **tab, int *length) {
   char cmd = 'n';
   int i = -1;
   printf("--------LISTE UNITES--------\n");
-  if(length <= 0) {
-    printf("Plus aucune unite selectionnable\n");
-    printf("----------------------------\n");
-  } else {
-    while(cmd != 'o') {
-      if(i + 1 < length) {
-        ++i;
-      } else {
-        i = 0;
-      }
+  while(cmd != 'o' && *length > 0) {
+    if(i + 1 < *length) {
+      ++i;
+    } else {
+      i = 0;
+    }
+    if(tab[i] == NULL) {
+      enleverTab(tab, i, *length, sizeof(*tab));
+    } else {
       afficherUnite(*tab[i]);
       printf("Voulez-vous le selectionner ? (o/n)\n");
       scanf(" %c", &cmd);
       printf("----------------------------\n");
     }
+  }
+
+  if(*length <= 0) {
+    printf("Plus aucune unite selectionnable\n");
+    printf("----------------------------\n");
   }
 
   return i;
@@ -629,7 +633,7 @@ Unite *parcourirUnites(UListe uliste) {
   return selection;
 }*/
 
-int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
+int actionUnite(Unite **unite, Monde *monde, int* mouvements) {
   char c[MAXCHAR];
   int r;
   printf("Que voulez-vous faire ?\n");
@@ -638,7 +642,7 @@ int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   if(strcmp("deplacer", c) == 0) {
 
     printf("========DEPLACEMENT========\n");
-    r = actionDeplacer(unite, monde, mouvements);
+    r = actionDeplacer(*unite, monde, mouvements);
 
   } else if(strcmp("attaquer", c) == 0) {
 
@@ -654,7 +658,7 @@ int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   } else if(strcmp("attendre", c) == 0) {
 
     printf("==========ATTENTE==========\n");
-    r = actionAttendre(unite, monde);
+    r = actionAttendre(*unite, monde);
     if(r > 0) {
       (*mouvements)--;
     }
@@ -674,17 +678,17 @@ int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   return r;
 }
 
-int actionAttaquer(Unite *unite, Monde *monde) {
+int actionAttaquer(Unite **unite, Monde *monde) {
   Unite **uportee;
   int length, selection, r = 2;
 
-    switch(unite->genre) {
+    switch((*unite)->genre) {
       case(ARCHER):
-        uportee = unitesAPortee(*unite, *monde, unite->portee + unite->B_portee, 0, CROIX, &length);
+        uportee = unitesAPortee(**unite, *monde, (*unite)->portee + (*unite)->B_portee, 0, CROIX, &length);
         if(uportee != NULL) {
           if(length > 0) {
-            selection = parcourirUniteSelect(uportee, length);
-            combat_Archer(unite, uportee[selection], monde);
+            selection = parcourirUniteSelect(uportee, &length);
+            combat_Archer(unite, &(uportee[selection]), monde);
           } else {
             printf("Pas d'ennemi proche...\n");
             r = 0;
@@ -694,11 +698,11 @@ int actionAttaquer(Unite *unite, Monde *monde) {
         }
         break;
       default:
-        uportee = unitesAPortee(*unite, *monde, unite->portee + unite->B_portee, 0, LOSANGE, &length);
+        uportee = unitesAPortee(**unite, *monde, (*unite)->portee + (*unite)->B_portee, 0, LOSANGE, &length);
         if(uportee != NULL) {
           if(length > 0) {
-            selection = parcourirUniteSelect(uportee, length);
-            combat(unite, uportee[selection], monde);
+            selection = parcourirUniteSelect(uportee, &length);
+            combat(unite, &(uportee[selection]), monde);
           } else {
             printf("Pas d'ennemi proche...\n");
             r = 0;
@@ -716,12 +720,12 @@ int actionAttaquer(Unite *unite, Monde *monde) {
 }
 
 
-void combat_Archer(Unite* exec, Unite *cible, Monde *monde) {
-  int pasX = signe(cible->posX - exec->posX);
-  int pasY = signe(cible->posY - exec->posY);
+void combat_Archer(Unite** exec, Unite **cible, Monde *monde) {
+  int pasX = signe((*cible)->posX - (*exec)->posX);
+  int pasY = signe((*cible)->posY - (*exec)->posY);
   int x, y;
-  int portee = exec->portee + exec->B_portee;
-  int degats = exec->att + exec->B_att;
+  int portee = (*exec)->portee + (*exec)->B_portee;
+  int degats = (*exec)->att + (*exec)->B_att;
   int reverse = 0;
   Unite *unite;
 
@@ -729,11 +733,11 @@ void combat_Archer(Unite* exec, Unite *cible, Monde *monde) {
   y = 0;
 
   while(((x < portee && y == 0) || (y < portee && x == 0)) && degats > 0) {
-    unite = monde->plateau[y + exec->posY][x + exec->posX];
-    if(unite != NULL && unite->couleur != exec->couleur) {
+    unite = monde->plateau[y + (*exec)->posY][x + (*exec)->posX];
+    if(unite != NULL && unite->couleur != (*exec)->couleur) {
       degats = max(attaquer(exec, cible, degats, monde), 0);
-      if(peutRiposter(*cible, *exec)) {
-        reverse += cible->att + cible->B_att;
+      if(peutRiposter(**cible, **exec)) {
+        reverse += (*cible)->att + (*cible)->B_att;
       }
     }
     x += pasX;
@@ -743,12 +747,12 @@ void combat_Archer(Unite* exec, Unite *cible, Monde *monde) {
   infligerDegats(exec, reverse, monde);
 }
 
-int infligerDegats(Unite* cible, int degats, Monde *monde) {
+int infligerDegats(Unite** cible, int degats, Monde *monde) {
   int r = 0;
-  printf("%c%c (%d,%d) recoit %d de degats !\n", cible->genre, cible->couleur, cible->posX, cible->posY, min(degats, cible->PV));
-  cible->PV = max(cible->PV - degats, 0);
-  if(cible->PV == 0) {
-    printf("%c%c (%d,%d) disparait !\n", cible->genre, cible->couleur, cible->posX, cible->posY);
+  printf("%c%c (%d,%d) recoit %d de degats !\n", (*cible)->genre, (*cible)->couleur, (*cible)->posX, (*cible)->posY, min(degats, (*cible)->PV));
+  (*cible)->PV = max((*cible)->PV - degats, 0);
+  if((*cible)->PV == 0) {
+    printf("%c%c (%d,%d) disparait !\n", (*cible)->genre, (*cible)->couleur, (*cible)->posX, (*cible)->posY);
     enleverUnite(cible, monde);
     r = 1;
   }
@@ -756,40 +760,40 @@ int infligerDegats(Unite* cible, int degats, Monde *monde) {
   return r;
 }
 
-int attaquer(Unite* exec, Unite* cible, int d, Monde *monde) {
+int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
   int degats;
-  int pv = cible->PV;
-  if(seProtege(*cible)) {
+  int pv = (*cible)->PV;
+  if(seProtege(**cible)) {
     degats = ceil(d / 2);
   } else {
     degats = d;
   }
 
-  cible->subis++;
+  (*cible)->subis++;
 
-  if(exec->genre == SORCIERE) {
-    soigne(min(cible->PV, degats), exec);
+  if((*exec)->genre == SORCIERE) {
+    soigne(min((*cible)->PV, degats), *exec);
   }
 
   if(infligerDegats(cible, degats, monde)) {
-    exec->kills++;
+    (*exec)->kills++;
   }
 
 
   return (degats - pv);
 }
 
-void combat(Unite* exec, Unite *cible, Monde *monde) {
+void combat(Unite **exec, Unite **cible, Monde *monde) {
   int fail = 0;
-  int success = (attaquer(exec, cible, exec->att + exec->B_att, monde) >= 0);
-  if(!success && peutRiposter(*cible, *exec)) {
-    fail = (attaquer(cible, exec, cible->att + cible->B_att, monde) >= 0);
+  int success = (attaquer(exec, cible, (*exec)->att + (*exec)->B_att, monde) >= 0);
+  if(!success && peutRiposter(**cible, **exec)) {
+    fail = (attaquer(cible, exec, (*cible)->att + (*cible)->B_att, monde) >= 0);
   }
   if(!fail && !success) {
-    switch(exec->genre) {
+    switch((*exec)->genre) {
       case(MATRIARCHE):
-        exec->etat = PARALYSIE;
-        cible->etat = PARALYSIE;
+        (*exec)->etat = PARALYSIE;
+        (*cible)->etat = PARALYSIE;
         break;
       case(SERF):
         infligerDegats(exec, 1, monde);
@@ -834,7 +838,7 @@ int actionAttendre_Sorciere(Unite *unite, Monde *monde) {
   int r = 3;
   uportee = unitesAPortee(*unite, *monde, 1, 1, CARRE, &length);
   if(uportee != NULL && length > 0) {
-    selection = parcourirUniteSelect(uportee, length);
+    selection = parcourirUniteSelect(uportee, &length);
     if (selection > -1) {
       intervertirPV(unite, uportee[selection]);
     } else {

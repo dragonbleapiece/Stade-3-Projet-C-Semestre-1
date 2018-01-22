@@ -57,10 +57,10 @@ void ligne();
 Unite *dernier(UListe uliste);
 
 /*Supprime l'Unite de la liste et du plateau en libérant la mémoire.
-  / unite : pointeur de l'Unite à supprimer
+  / unite : pointeur du pointeur de l'Unite à supprimer
   / monde : pointeur du Monde dans lequel l'Unite réside
 */
-void enleverUnite(Unite *unite, Monde* monde);
+void enleverUnite(Unite **unite, Monde* monde);
 
 /*Renvoie l'adresse de l'Unite précédant celle de Unite unite dans l'UListe uliste si elle existe. Si unite est en première position, renvoie son adresse. Si rien n'est trouvé, renvoie NULL.
   / unite : pointeur vers l'Unite dont on cherche le précédent
@@ -112,9 +112,9 @@ int nombreUnite(UListe uliste);
 
 /*Parcourt le tableau d'Unite* tant que le joueur le souhaite. Si on arrive à la dernière Unite*, la suivante se retrouve être la première. Renvoie l'indice de l'Unite selectionnée s'il y en a. Retourne -1 si le tableau est vide.
   / tab : tableau des Unite* selectionnables
-  / length : taille du tableau tab
+  / *length : pointeur vers la taille du tableau tab
 */
-int parcourirUniteSelect(Unite **tab, int length);
+int parcourirUniteSelect(Unite **tab, int *length);
 
 /*Enleve une unite du tableau à l'indice voulu.
   / tab : tableau des Unite* selectionnables
@@ -140,7 +140,7 @@ void afficherUnite(Unite unite);
   / unite : pointeur vers l'Unite qui fait l'action
   / monde : pointeur vers le Monde dans lequel se trouve l'Unite
 */
-int actionUnite(Unite *unite, Monde *monde, int *mouvements);
+int actionUnite(Unite **unite, Monde *monde, int *mouvements);
 
 /*Libère l'allocation mémoire de Monde et de certains de ses attributs.
   / monde : pointeur vers le Monde que l'on veut libérer
@@ -217,15 +217,15 @@ void initialiseTabCoord(Coord *tab, size_t length);
 
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements);
 
-int actionAttaquer(Unite *unite, Monde *monde);
+int actionAttaquer(Unite **unite, Monde *monde);
 
-void combat_Archer(Unite* exec, Unite *cible, Monde *monde);
+void combat_Archer(Unite** exec, Unite **cible, Monde *monde);
 
-int infligerDegats(Unite* cible, int degats, Monde *monde);
+int infligerDegats(Unite** cible, int degats, Monde *monde);
 
-int attaquer(Unite* exec, Unite* cible, int d, Monde *monde);
+int attaquer(Unite** exec, Unite** cible, int d, Monde *monde);
 
-void combat(Unite* exec, Unite *cible, Monde *monde);
+void combat(Unite** exec, Unite **cible, Monde *monde);
 
 int seProtege(Unite cible);
 
