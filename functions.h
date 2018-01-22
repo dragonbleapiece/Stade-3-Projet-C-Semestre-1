@@ -103,7 +103,7 @@ void gererTourJoueur(Couleur couleur, Monde *monde);
   / uliste : UListe à partir de laquelle on veut créer un tableau
   / *n : pointeur auquel on attribue la longueur du tableau
 */
-Unite **creerSelection(UListe uliste, int *n);
+Unite **creerSelection(UListe uliste, Etat etat, int *n);
 
 /*Renvoie le nombre d'Unite dans une UListe.
   / uliste : UListe contenant une liste chaînée d'Unite
@@ -247,6 +247,64 @@ int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme form
 
 int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme);
 
+int actionAttendre_Barde(Unite *unite, Monde *monde);
 
+void infligeMalusZone(Unite *cible, Monde monde, int portee, Forme forme, int malus);
+
+void infligeBonusMalus(Unite *cible, int bm);
+
+void upGuerrier(Unite *unite);
+
+void upAssassin(Unite *unite);
+
+void upArcher(Unite *unite);
+
+void upBarde(Unite *unite);
+
+void upBastion(Unite *unite);
+
+void upDuc(Unite *unite);
+
+void upArchiduc(Unite *unite);
+
+void upChampion(Unite *unite);
+
+void upSorciere(Unite *unite);
+
+void upSainte(Unite *unite);
+
+void upMatriarche(Unite *unite);
+
+void reinitialiseBonusMalus(Unite **tab, int length);
+
+void evolution(UListe uliste, Monde monde);
+
+void evoluer(Unite *unite, Monde monde);
+
+void attente(UListe uliste, Monde *monde);
+
+void attendre(Unite *unite, Monde *monde);
+
+void production(Unite unite, Monde *monde, Genre genre, Forme forme, int portee);
+
+Coord *placesAPortee(Unite unite, Monde monde, int portee, Forme forme, int *length);
+
+int nbPlacesAPortee(Unite unite, Monde monde, int portee, Forme forme);
+
+int nombreEtat(UListe uliste, Etat etat);
+
+void renforceGuerriers(Unite **tab, int length);
+
+void debutTourJoueur(UListe uliste, Monde *monde, Unite **tab, int length);
+
+void paralysie(UListe uliste);
+
+Unite *getUniteByGenre(UListe uliste, Genre genre);
+
+void augmenteEvoMatriarche(Unite *unite, Monde monde);
+
+int actionEvoluer(Unite *unite, Monde *monde);
+
+char *checkEvolutions(Unite unite, Monde monde);
 
 #endif /* FUNCTIONS_H_INCLUDED */

@@ -12,6 +12,9 @@
 #define MAX_PVMAX_SERF 5
 #define MIN_ATT_SERF 1
 #define MAX_ATT_SERF 5
+#define BONUS_BARDE 3
+#define MALUS_BARDE -2
+#define MAXEVO 3
 
 /* les genres d'unites */
 
@@ -72,10 +75,6 @@ typedef struct UListe{
   Unite *unites;
   Couleur couleur;
 } UListe;
-
-typedef struct Case {
-  Unite *tab[MAXPERSO];
-} Case;
 
 
 typedef struct Monde{

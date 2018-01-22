@@ -75,75 +75,153 @@ void initialiseStats(Unite *unite, Genre genre) {
   unite->B_portee = 0;
   unite->B_att = 0;
 
+  unite->PVmax = PVmax;
+  unite->att = att;
+  unite->portee = 1;
+
   switch(genre) {
     case(GUERRIER):
-      unite->PVmax = PVmax + 10;
-      unite->att = att + 3;
-      unite->portee = 1;
+      upGuerrier(unite);
       break;
     case(SERF):
-      unite->PVmax = PVmax;
-      unite->att = att;
-      unite->portee = 1;
+      unite->PV = unite->PVmax;
       break;
     case(MATRIARCHE):
-      unite->PVmax = 1;
-      unite->att = 1;
-      unite->portee = 3;
+      upMatriarche(unite);
       break;
     case(ASSASSIN):
-      unite->PVmax = PVmax;
-      unite->att = 20;
-      unite->portee = 1;
+      upAssassin(unite);
       break;
     case(ARCHER):
-      unite->PVmax = PVmax + 3;
-      unite->att = att + 1;
-      unite->portee = 3;
+      upGuerrier(unite);
+      upArcher(unite);
       break;
     case(BARDE):
-      unite->PVmax = PVmax + 6;
-      unite->att = att + 6;
-      unite->portee = 3;
+      upGuerrier(unite);
+      upArcher(unite);
+      upBarde(unite);
       break;
     case(DUC):
-      unite->PVmax = PVmax + 15;
-      unite->att = att + 8;
-      unite->portee = 1;
+      upGuerrier(unite);
+      upDuc(unite);
       break;
     case(ARCHIDUC):
-      unite->PVmax = PVmax;
-      unite->att = 1;
-      unite->portee = 1;
+      upGuerrier(unite);
+      upDuc(unite);
+      upArchiduc(unite);
       break;
     case(BASTION):
-      unite->PVmax = PVmax + 30;
-      unite->att = att;
-      unite->portee = 1;
+      upGuerrier(unite);
+      upBastion(unite);
       break;
     case(CHAMPION):
-      unite->PVmax = PVmax + 20;
-      unite->att = att + 10;
-      unite->portee = 2;
+      upGuerrier(unite);
+      upDuc(unite);
+      unite->att -= 10;
+      upChampion(unite);
       break;
     case(SORCIERE):
-      unite->PVmax = 10;
-      unite->att = 6;
-      unite->portee = 2;
+      upMatriarche(unite);
+      upSorciere(unite);
       break;
     case(SAINTE):
-      unite->PVmax = 15;
-      unite->att = 3;
-      unite->portee = 2;
+      upMatriarche(unite);
+      upSainte(unite);
       break;
     default:
       unite->PVmax = 0;
       unite->att = 0;
       unite->portee = 0;
+      unite->PV = unite->PVmax;
       break;
   }
+}
 
+void upGuerrier(Unite *unite) {
+  unite->PVmax += 10;
   unite->PV = unite->PVmax;
+  unite->att += 3;
+  unite->portee = 1;
+  unite->genre = GUERRIER;
+}
+
+void upAssassin(Unite *unite) {
+  unite->PV = unite->PVmax;
+  unite->att = 20;
+  unite->portee = 1;
+  unite->genre = ASSASSIN;
+}
+
+void upArcher(Unite *unite) {
+  unite->PVmax += -7;
+  unite->PV = unite->PVmax;
+  unite->att += -2;
+  unite->portee = 3;
+  unite->genre = ARCHER;
+}
+
+void upBarde(Unite *unite) {
+  unite->PVmax += 3;
+  unite->PV = unite->PVmax;
+  unite->att += 5;
+  unite->portee = 3;
+  unite->genre = BARDE;
+}
+
+void upBastion(Unite *unite) {
+  unite->PVmax += 20;
+  unite->PV = unite->PVmax;
+  unite->att += -3;
+  unite->portee = 1;
+  unite->genre = BASTION;
+}
+
+void upDuc(Unite *unite) {
+  unite->PVmax += 5;
+  unite->PV = unite->PVmax;
+  unite->att += 5;
+  unite->portee = 1;
+  unite->genre = DUC;
+}
+
+void upArchiduc(Unite *unite) {
+  unite->PVmax += -15;
+  unite->PV = unite->PVmax;
+  unite->att = 1;
+  unite->portee = 1;
+  unite->genre = ARCHIDUC;
+}
+
+void upChampion(Unite *unite) {
+  unite->PVmax += 5;
+  unite->PV = unite->PVmax;
+  unite->att += 12;
+  unite->portee = 2;
+  unite->genre = CHAMPION;
+}
+
+void upSorciere(Unite *unite) {
+  unite->PVmax = 10;
+  unite->PV = unite->PVmax;
+  unite->att = 6;
+  unite->portee = 2;
+  unite->genre = SORCIERE;
+}
+
+void upSainte(Unite *unite) {
+  unite->PVmax = 15;
+  unite->PV = unite->PVmax;
+  unite->att = 3;
+  unite->portee = 2;
+  unite->genre = SAINTE;
+}
+
+void upMatriarche(Unite *unite) {
+  unite->PVmax = 1;
+  unite->PV = unite->PVmax;
+  unite->att = 1;
+  unite->portee = 3;
+  unite->genre = MATRIARCHE;
 }
 
 int rand_a_b(int a, int b) {
@@ -282,8 +360,7 @@ int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mou
       && destY <= LONG
       && destX >= 0
       && destY >= 0
-      && destX != unite->posX
-      && destY != unite->posY
+      && !(destX == unite->posX && destY == unite->posY)
       && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= *mouvements)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
     {
       printf("Deplacement\n");
@@ -492,13 +569,23 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   char cmd;
   UListe uliste = *getUListe(couleur, monde);
   int nUnite;
-  Unite **uniteSelect = creerSelection(uliste, &nUnite);
-  int mouvements = nombreGenre(uliste, SERF) + 1;
-  int action;
+  Unite **uniteSelect;
+  int action, mouvements;
+
+
+  evolution(uliste, *monde);
+  attente(uliste, monde);
+
+  mouvements = nombreGenre(uliste, SERF) + 1;
+  uniteSelect = creerSelection(uliste, DEFAUT, &nUnite);
 
   if(nUnite && uniteSelect != NULL) {
     affichePlateau(*monde);
     printf("Tour : %d | Joueur : %c\n", monde->tour, couleur);
+
+    debutTourJoueur(uliste, monde, uniteSelect, nUnite);
+
+
     do {
       printf("Points de mouvement : %d\n", mouvements);
       selection = parcourirUniteSelect(uniteSelect, &nUnite);
@@ -518,19 +605,194 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
         cmd = 'o';
       }
     } while(cmd != 'o');
+
+    /*finTourJoueur*/paralysie(uliste);
+
     free(uniteSelect);
   }
 }
 
-Unite **creerSelection(UListe uliste, int *n) {
+void debutTourJoueur(UListe uliste, Monde *monde, Unite **tab, int length) {
+  Unite *mater = getUniteByGenre(uliste, MATRIARCHE);
+  renforceGuerriers(tab, length);
+  reinitialiseBonusMalus(tab, length);
+  if(mater != NULL) {
+    augmenteEvoMatriarche(getUniteByGenre(uliste, MATRIARCHE), *monde);
+  }
+}
+
+void renforceGuerriers(Unite **tab, int length) {
+  int i;
+  Unite *unite;
+  for(i = 0; i < length; ++i) {
+    unite = tab[i];
+    if(unite->genre == GUERRIER && unite->evo == 0 && unite->PV <= 5) {
+      unite->att += 5;
+      unite->evo = 1;
+    }
+  }
+}
+
+void augmenteEvoMatriarche(Unite *unite, Monde monde) {
+  int nUnite = nbUnitesAPortee(*unite, monde, 1, 1, CROIX);
+  if(nUnite > 0) {
+    unite->evo = min(unite->evo + 1, 10);
+  } else {
+    unite->evo = 0;
+  }
+}
+
+Unite *getUniteByGenre(UListe uliste, Genre genre) {
+  Unite* unite = uliste.unites;
+  while(unite != NULL && unite->genre != genre) {
+    unite = unite->suiv;
+  }
+
+  return unite;
+}
+
+void reinitialiseBonusMalus(Unite **tab, int length) {
+  int i;
+  for(i = 0; i < length; ++i) {
+    tab[i]->B_att = 0;
+    tab[i]->B_PVmax = 0;
+    tab[i]->PV = min(tab[i]->PV, tab[i]->PVmax);
+    tab[i]->B_portee = 0;
+  }
+}
+
+
+
+void evolution(UListe uliste, Monde monde) {
+  int nUnite, i;
+  Unite **tab = creerSelection(uliste, EVOLUTION, &nUnite);
+  if(tab != NULL) {
+    reinitialiseBonusMalus(tab, nUnite);
+    for(i = 0; i < nUnite; ++i) {
+      evoluer(tab[i], monde);
+    }
+  }
+
+  free(tab);
+}
+
+void evoluer(Unite *unite, Monde monde) {
+  switch(unite->evo) {
+    case(GUERRIER):
+      upGuerrier(unite);
+      break;
+    case(ARCHER):
+      upArcher(unite);
+      break;
+    case(BARDE):
+      upBarde(unite);
+      break;
+    case(BASTION):
+      upBastion(unite);
+      break;
+    case(DUC):
+      upDuc(unite);
+      break;
+    case(ARCHIDUC):
+      upArchiduc(unite);
+      break;
+    case(CHAMPION):
+      upChampion(unite);
+      break;
+    case(SORCIERE):
+      upSorciere(unite);
+      break;
+    case(SAINTE):
+      upSainte(unite);
+      break;
+    case(ASSASSIN):
+      upAssassin(unite);
+      break;
+    default:
+      unite->att = 0;
+      unite->PVmax = 0;
+      unite->PV = 0;
+      unite->portee = 0;
+      break;
+  }
+  unite->evo = 0;
+  unite->kills = 0;
+  unite->subis = 0;
+  unite->tour = monde.tour;
+  unite->etat = DEFAUT;
+}
+
+void attente(UListe uliste, Monde *monde) {
+  int nUnite, i;
+  Unite **tab = creerSelection(uliste, ATTENTE, &nUnite);
+  if(tab != NULL) {
+    reinitialiseBonusMalus(tab, nUnite);
+    for(i = 0; i < nUnite; ++i) {
+      attendre(tab[i], monde);
+    }
+  }
+
+  free(tab);
+}
+
+void attendre(Unite *unite, Monde *monde) {
+  switch(unite->genre) {
+    case(CHAMPION):
+      soigne(5, unite);
+      break;
+    case(MATRIARCHE):
+      if(rand_a_b(0,100) < 50) {
+        production(*unite, monde, SERF, CROIX, 1);
+      }
+      break;
+    default:
+      break;
+  }
+  unite->etat = DEFAUT;
+}
+
+void production(Unite unite, Monde *monde, Genre genre, Forme forme, int portee) {
+  int length, random;
+  Coord coord;
+  Coord *places = placesAPortee(unite, *monde, portee, forme, &length);
+
+  if(places != NULL && length > 0) {
+    random = rand_a_b(0, length);
+    coord = places[random];
+    placerAuMonde(creerUnite(genre, getUListe(unite.couleur, monde), monde->tour), monde, coord.x, coord.y);
+  }
+
+  free(places);
+}
+
+
+
+void paralysie(UListe uliste) {
+  int nUnite, i;
+  Unite **tab = creerSelection(uliste, PARALYSIE, &nUnite);
+  if(tab != NULL) {
+    reinitialiseBonusMalus(tab, nUnite);
+    for(i = 0; i < nUnite; ++i) {
+      tab[i]->etat = DEFAUT;
+    }
+  }
+
+  free(tab);
+}
+
+Unite **creerSelection(UListe uliste, Etat etat, int *n) {
   int i;
   Unite **tab;
   Unite *unite;
-  *n = nombreUnite(uliste);
+  *n = nombreEtat(uliste, etat);
   tab = calloc(*n, sizeof(*tab));
   unite = uliste.unites;
-  for(i = 0; i < *n && unite != NULL; ++i) {
-    tab[i] = unite;
+  i = 0;
+  while(i < *n && unite != NULL) {
+    if(unite->etat == etat) {
+      tab[i] = unite;
+      ++i;
+    }
     unite = unite->suiv;
   }
 
@@ -546,6 +808,21 @@ int nombreUnite(UListe uliste) {
     unite = (unite->suiv);
     n++;
   }
+  return n;
+}
+
+int nombreEtat(UListe uliste, Etat etat) {
+  Unite *unite;
+  int n = 0;
+  unite = uliste.unites;
+  if(unite != NULL) {
+    n += (unite->etat == etat);
+    while(unite->suiv != NULL) {
+      unite = (unite->suiv);
+      n += (unite->etat == etat);
+    }
+  }
+
   return n;
 }
 
@@ -575,7 +852,7 @@ int parcourirUniteSelect(Unite **tab, int *length) {
       i = 0;
     }
     if(tab[i] == NULL) {
-      enleverTab(tab, i, *length, sizeof(*tab));
+      *length = enleverTab(tab, i, *length, sizeof(*tab));
     } else {
       afficherUnite(*tab[i]);
       printf("Voulez-vous le selectionner ? (o/n)\n");
@@ -587,6 +864,7 @@ int parcourirUniteSelect(Unite **tab, int *length) {
   if(*length <= 0) {
     printf("Plus aucune unite selectionnable\n");
     printf("----------------------------\n");
+    i = -1;
   }
 
   return i;
@@ -666,8 +944,12 @@ int actionUnite(Unite **unite, Monde *monde, int* mouvements) {
   } else if(strcmp("evoluer", c) == 0) {
 
     printf("===CHANGEMENT DE CLASSE===\n");
-    r = 4;
 
+    r = actionEvoluer(*unite, monde);
+
+    if(r > 0) {
+      (*mouvements)--;
+    }
   } else {
 
     printf("==========RETOUR==========\n");
@@ -676,6 +958,125 @@ int actionUnite(Unite **unite, Monde *monde, int* mouvements) {
   }
 
   return r;
+}
+
+int actionEvoluer(Unite *unite, Monde *monde) {
+  int r = 4;
+  int i = 0;
+  char c;
+
+  char *evo = checkEvolutions(*unite, *monde);
+  while(evo[i] != '\0') {
+    switch(evo[i]) {
+      case(ASSASSIN):
+        printf("Assassin (%c)\n", ASSASSIN);
+        break;
+      case(SORCIERE):
+        printf("Sorciere (%c)\n", SORCIERE);
+        break;
+      case(SAINTE):
+        printf("Sainte (%c)\n", SAINTE);
+        break;
+      case(GUERRIER):
+        printf("Guerrier (%c)\n", GUERRIER);
+        break;
+      case(ARCHER):
+        printf("Archer (%c)\n", ARCHER);
+        break;
+      case(BARDE):
+        printf("Barde (%c)\n", BARDE);
+        break;
+      case(DUC):
+        printf("Duc (%c)\n", DUC);
+        break;
+      case(ARCHIDUC):
+        printf("ARCHIDUC (%c)\n", ARCHIDUC);
+        break;
+      case(CHAMPION):
+        printf("Champion (%c)\n", CHAMPION);
+        break;
+      default:
+        break;
+    }
+    ++i;
+  }
+
+
+  if(i == 0) {
+    printf("Votre unite ne peut pas evoluer...\n");
+    r = 0;
+  } else {
+    printf("Inscrivez un caractere correspondant a la classe vers laquelle evoluer :\n");
+    while(!scanf(" %c", &c) || strchr(evo, c) == NULL) {
+      printf("Veuillez inscrire un caractere valide...\n");
+    }
+    unite->evo = c;
+    unite->etat = EVOLUTION;
+  }
+
+  free(evo);
+  return r;
+}
+
+/*À libérer avec free*/
+char *checkEvolutions(Unite unite, Monde monde) {
+  char *evo = calloc(MAXEVO + 1, sizeof(*evo));
+  int i = 0;
+  switch(unite.genre) {
+    case(SERF):
+      if(unite.evo == 1) {
+        evo[i] = ASSASSIN;
+        ++i;
+      }
+      if(monde.tour - unite.tour >= 3) {
+        evo[i] = GUERRIER;
+        ++i;
+      }
+      break;
+    case(MATRIARCHE):
+      if(unite.evo >= 10) {
+        evo[i] = SAINTE;
+        ++i;
+      }
+      if(unite.kills > 0) {
+        evo[i] = SORCIERE;
+        ++i;
+      }
+      break;
+    case(GUERRIER):
+      evo[i] = ARCHER;
+      ++i;
+      if(unite.subis >= 3) {
+        evo[i] = BASTION;
+        ++i;
+      }
+      if(unite.kills >= 3) {
+        evo[i] = DUC;
+        ++i;
+      }
+      break;
+    case(ARCHER):
+      if(monde.tour - unite.tour >= 7) {
+        evo[i] = BARDE;
+        ++i;
+      }
+      break;
+    case(DUC):
+      if(nombreGenre(*getUListe(unite.couleur, &monde), CHAMPION) < 1 && unite.kills >= 5) {
+        evo[i] = CHAMPION;
+        ++i;
+      }
+      if(unite.att <= 5) {
+        evo[i] = ARCHIDUC;
+        ++i;
+      }
+      break;
+    default:
+      break;
+  }
+
+  evo[i] = '\0';
+  return evo;
 }
 
 int actionAttaquer(Unite **unite, Monde *monde) {
@@ -712,7 +1113,9 @@ int actionAttaquer(Unite **unite, Monde *monde) {
         }
         break;
     }
-
+  if(*unite == NULL || (*unite)->etat == PARALYSIE) {
+    r = 0;
+  }
 
   free(uportee);
 
@@ -736,7 +1139,7 @@ void combat_Archer(Unite** exec, Unite **cible, Monde *monde) {
     unite = monde->plateau[y + (*exec)->posY][x + (*exec)->posX];
     if(unite != NULL && unite->couleur != (*exec)->couleur) {
       degats = max(attaquer(exec, cible, degats, monde), 0);
-      if(peutRiposter(**cible, **exec)) {
+      if(!degats && peutRiposter(**cible, **exec)) {
         reverse += (*cible)->att + (*cible)->B_att;
       }
     }
@@ -762,9 +1165,10 @@ int infligerDegats(Unite** cible, int degats, Monde *monde) {
 
 int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
   int degats;
+  Genre genreCible = (*cible)->genre;
   int pv = (*cible)->PV;
   if(seProtege(**cible)) {
-    degats = ceil(d / 2);
+    degats = ceil((float) d / 2.0);
   } else {
     degats = d;
   }
@@ -777,6 +1181,9 @@ int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
 
   if(infligerDegats(cible, degats, monde)) {
     (*exec)->kills++;
+    if((*exec)->genre == SERF && genreCible == MATRIARCHE) {
+      (*exec)->evo = 1;
+    }
   }
 
 
@@ -785,10 +1192,18 @@ int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
 
 void combat(Unite **exec, Unite **cible, Monde *monde) {
   int fail = 0;
-  int success = (attaquer(exec, cible, (*exec)->att + (*exec)->B_att, monde) >= 0);
+  int degats = (*exec)->att + (*exec)->B_att;
+
+  if((*exec)->genre == ARCHIDUC) {
+    degats += nombreGenre(*getUListe((*exec)->couleur, monde), SERF);
+  }
+
+  int success = (attaquer(exec, cible, degats, monde) >= 0);
   if(!success && peutRiposter(**cible, **exec)) {
     fail = (attaquer(cible, exec, (*cible)->att + (*cible)->B_att, monde) >= 0);
   }
+
+
   if(!fail && !success) {
     switch((*exec)->genre) {
       case(MATRIARCHE):
@@ -798,10 +1213,39 @@ void combat(Unite **exec, Unite **cible, Monde *monde) {
       case(SERF):
         infligerDegats(exec, 1, monde);
         break;
+      case(BARDE):
+        infligeMalusZone(*cible, *monde, 1, CROIX, MALUS_BARDE);
+        infligeBonusMalus(*cible, MALUS_BARDE);
+        break;
+      case(DUC):
+        production(**exec, monde, SERF, CROIX, 1);
+        (*exec)->att = min((*exec)->att - 1, 1);
+        break;
       default:
         break;
     }
 
+  }
+}
+
+void infligeMalusZone(Unite *cible, Monde monde, int portee, Forme forme, int malus) {
+  int length, i;
+  Unite **uporte;
+  uporte = unitesAPortee(*cible, monde, portee, 1, forme, &length);
+  if(uporte != NULL) {
+    for(i = 0; i < length; ++i) {
+      infligeBonusMalus(uporte[i], malus);
+    }
+  }
+  free(uporte);
+}
+
+void infligeBonusMalus(Unite *cible, int bm) {
+  if(bm > 0 && cible->B_att <= 0) {
+    cible->B_att += bm;
+  } else if (bm < 0 && cible->B_att % BONUS_BARDE == 0) {
+    /*max bonus == 3 && max malus == -2*/
+    cible->B_att += bm;
   }
 }
 
@@ -820,10 +1264,15 @@ int actionAttendre(Unite *unite, Monde *monde) {
   switch(unite->genre) {
     case(SORCIERE):
       r = actionAttendre_Sorciere(unite, monde);
+      unite->etat = ATTENTE;
       break;
     case(SAINTE):
       r = actionAttendre_Sainte(unite, monde);
+      unite->etat = ATTENTE;
       break;
+    case(BARDE):
+      r = actionAttendre_Barde(unite, monde);
+      unite->etat = ATTENTE;
     default:
       unite->etat = ATTENTE;
       break;
@@ -841,6 +1290,28 @@ int actionAttendre_Sorciere(Unite *unite, Monde *monde) {
     selection = parcourirUniteSelect(uportee, &length);
     if (selection > -1) {
       intervertirPV(unite, uportee[selection]);
+    } else {
+      printf("Pas d'allié proche...\n");
+      r = 0;
+    }
+  } else {
+    printf("Erreur mémoire !\n");
+  }
+
+  free(uportee);
+
+  return r;
+}
+
+int actionAttendre_Barde(Unite *unite, Monde *monde) {
+  Unite **uportee;
+  int length, selection;
+  int r = 3;
+  uportee = unitesAPortee(*unite, *monde, unite->portee + unite->B_portee, 1, CROIX, &length);
+  if(uportee != NULL && length > 0) {
+    selection = parcourirUniteSelect(uportee, &length);
+    if (selection > -1) {
+      infligeBonusMalus(uportee[selection], BONUS_BARDE);
     } else {
       printf("Pas d'allié proche...\n");
       r = 0;
@@ -915,6 +1386,33 @@ Unite **unitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme fo
   return select;
 }
 
+/*À libérer avec free*/
+Coord *placesAPortee(Unite unite, Monde monde, int portee, Forme forme, int *length) {
+  int i, j, n;
+  Coord coord;
+  Coord *select;
+  *length = nbPlacesAPortee(unite, monde, portee, forme);
+  select = calloc(*length, sizeof(*select));
+  n = 0;
+
+
+  for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
+    for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
+      if(i >= 0 && i <= LARG && j >= 0 && j <= LONG
+      && (i != unite.posX || j != unite.posY)
+      && monde.plateau[j][i] == NULL
+      && rangeShape(i, j, unite.posX, unite.posY, portee, forme)) {
+        coord.x = i;
+        coord.y = j;
+        select[n] = coord;
+        n++;
+      }
+    }
+  }
+
+  return select;
+}
+
 int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme forme) {
   int i, j, n, cond;
   n = 0;
@@ -932,6 +1430,24 @@ int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme form
         && (i != unite.posX || j != unite.posY)) {
         n += (monde.plateau[j][i] != NULL
           && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
+        && rangeShape(i, j, unite.posX, unite.posY, portee, forme));
+      }
+    }
+  }
+
+  return n;
+}
+
+int nbPlacesAPortee(Unite unite, Monde monde, int portee, Forme forme) {
+  int i, j, n;
+  n = 0;
+
+  for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
+    for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
+      if(i >= 0 && i <= LARG
+        && j >= 0 && j <= LONG
+        && (i != unite.posX || j != unite.posY)) {
+        n += (monde.plateau[j][i] == NULL
         && rangeShape(i, j, unite.posX, unite.posY, portee, forme));
       }
     }
@@ -1130,7 +1646,7 @@ void gererPartie(void){
     affichePlateau(mondejeu);
     while( !arret && (nombreUnite(*(mondejeu.rouge)) > 0 && nombreUnite(*(mondejeu.bleu)) > 0)) {
     gererTour(&mondejeu);
-    arret = arreterPartie(mondejeu);
+    arret = arreterPartie();
     }
         /*viderMonde(&mondejeu);*/
     if(!arret) {
