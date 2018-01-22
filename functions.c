@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "structures.h"
 #include "functions.h"
 
@@ -279,6 +280,10 @@ int deplacerUnite(Unite *unite, Monde *monde, int destX, int destY){
 int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements) {
     if(destX <= LARG
       && destY <= LONG
+      && destX >= 0
+      && destY >= 0
+      && destX != unite->posX
+      && destY != unite->posY
       && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= *mouvements)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
     {
       printf("Deplacement\n");
@@ -289,12 +294,15 @@ int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mou
       depart.y = unite->posY;
       dest.x = destX;
       dest.y = destY;
-      tab = findWay(depart, dest, *monde);
+      tab = findPath(depart, dest, *monde);
       if(tab == NULL) {
         return 2;
       }
       r = executePath(unite, tab, monde);
       if(r != 0) {
+        if(unite->posX != destX) {
+          r = -1; /*Si l'unité n'a pas atteint sa destination et si aucune erreur de déplacement n'a été signalée, cela veut dire qu'un obstacle a été rencontré. Cette instruction peut être optimisée en modifiant construireTab()*/
+        }
         *mouvements -= nCoordTab(tab) - 1; /*Ne compte pas la position de départ du chemin*/
       }
       /*Deplacement reussi même si la destination donnee n'a pas ete atteinte*/
@@ -308,7 +316,7 @@ int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mou
 }
 
 /*ne pas oublier de libérer avec free*/
-Coord *findWay(Coord depart, Coord dest, Monde monde) {
+Coord *findPath(Coord depart, Coord dest, Monde monde) {
   int lengthX = nbDeplacement(depart, dest) + 2;
   int lengthY;
   if(depart.x == dest.x || depart.y == dest.y) {
@@ -328,9 +336,9 @@ Coord *findWay(Coord depart, Coord dest, Monde monde) {
       return NULL;
     }
 
-    printf("findWay\n");
+    printf("findPath\n");
     construireTab(tab, depart, dest, 0, 0, pasX, pasY, monde, lengthY);
-    g = goodWay(tab, lengthX, lengthY);
+    g = goodPath(tab, lengthX, lengthY);
     free(tab);
 
     return g;
@@ -384,8 +392,8 @@ void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX,
 
 }
 
-Coord *goodWay(Coord **tab, int lengthX, int lengthY) {
-  printf("GoodWay\n");
+Coord *goodPath(Coord **tab, int lengthX, int lengthY) {
+  printf("GoodPath\n");
   int i, j;
   i = 1;
   while(i < lengthX && lengthY > 1) {
@@ -454,6 +462,7 @@ void enleverUnite(Unite *unite, Monde *monde) {
   }
   monde->plateau[unite->posY][unite->posX] = NULL;
   free(unite);
+  unite = NULL; /*prévient de bugs*/
 }
 
 UListe *getUListe(Couleur couleur, Monde *monde) {
@@ -482,12 +491,12 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   int selection;
   char cmd;
   UListe uliste = *getUListe(couleur, monde);
-  int nUnite = nombreUnite(uliste);
-  Unite **uniteSelect = creerSelection(uliste);
+  int nUnite;
+  Unite **uniteSelect = creerSelection(uliste, &nUnite);
   int mouvements = nombreGenre(uliste, SERF) + 1;
   int action;
 
-  if(nUnite) {
+  if(nUnite && uniteSelect != NULL) {
     affichePlateau(*monde);
     printf("Tour : %d | Joueur : %c\n", monde->tour, couleur);
     do {
@@ -513,12 +522,14 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   }
 }
 
-Unite **creerSelection(UListe uliste) {
-  int n = nombreUnite(uliste);
+Unite **creerSelection(UListe uliste, int *n) {
   int i;
-  Unite **tab = calloc(n, sizeof(*tab));
-  Unite *unite = uliste.unites;
-  for(i = 0; i < n && unite != NULL; ++i) {
+  Unite **tab;
+  Unite *unite;
+  *n = nombreUnite(uliste);
+  tab = calloc(*n, sizeof(*tab));
+  unite = uliste.unites;
+  for(i = 0; i < *n && unite != NULL; ++i) {
     tab[i] = unite;
     unite = unite->suiv;
   }
@@ -578,7 +589,7 @@ int parcourirUniteSelect(Unite **tab, int length) {
 }
 
 
-/*fonction générale*/
+/*fonction générique*/
 int enleverTab(void *tab, size_t indice, size_t length, size_t size) {
   if(indice < length - 1) {
     decaleTab(tab, indice, length, size);
@@ -626,28 +637,36 @@ int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   scanf(" %s", c);
   if(strcmp("deplacer", c) == 0) {
 
-    actionDeplacer(unite, monde, mouvements);
-    r = 1;
+    printf("========DEPLACEMENT========\n");
+    r = actionDeplacer(unite, monde, mouvements);
 
   } else if(strcmp("attaquer", c) == 0) {
 
-    int posX, posY;
-    printf("Indiquer positions x,y : ");
-    scanf("%d,%d", &posX, &posY);
-    attaquer(unite, monde, posX, posY);
-    r = 2;
+    printf("==========ATTAQUE==========\n");
+    r = actionAttaquer(unite, monde);
+
+    if(r > 0) {
+      (*mouvements)--;
+    }
+
+
 
   } else if(strcmp("attendre", c) == 0) {
 
-    r = 3;
+    printf("==========ATTENTE==========\n");
+    r = actionAttendre(unite, monde);
+    if(r > 0) {
+      (*mouvements)--;
+    }
 
   } else if(strcmp("evoluer", c) == 0) {
 
+    printf("===CHANGEMENT DE CLASSE===\n");
     r = 4;
 
   } else {
 
-    printf("Retour !\n");
+    printf("==========RETOUR==========\n");
     r = 0;
 
   }
@@ -655,8 +674,290 @@ int actionUnite(Unite *unite, Monde *monde, int* mouvements) {
   return r;
 }
 
-void actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
-  int posX, posY;
+int actionAttaquer(Unite *unite, Monde *monde) {
+  Unite **uportee;
+  int length, selection, r = 2;
+
+    switch(unite->genre) {
+      case(ARCHER):
+        uportee = unitesAPortee(*unite, *monde, unite->portee + unite->B_portee, 0, CROIX, &length);
+        if(uportee != NULL) {
+          if(length > 0) {
+            selection = parcourirUniteSelect(uportee, length);
+            combat_Archer(unite, uportee[selection], monde);
+          } else {
+            printf("Pas d'ennemi proche...\n");
+            r = 0;
+          }
+        } else {
+          printf("Erreur mémoire !\n");
+        }
+        break;
+      default:
+        uportee = unitesAPortee(*unite, *monde, unite->portee + unite->B_portee, 0, LOSANGE, &length);
+        if(uportee != NULL) {
+          if(length > 0) {
+            selection = parcourirUniteSelect(uportee, length);
+            combat(unite, uportee[selection], monde);
+          } else {
+            printf("Pas d'ennemi proche...\n");
+            r = 0;
+          }
+        } else {
+          printf("Erreur mémoire !\n");
+        }
+        break;
+    }
+
+
+  free(uportee);
+
+  return r;
+}
+
+
+void combat_Archer(Unite* exec, Unite *cible, Monde *monde) {
+  int pasX = signe(cible->posX - exec->posX);
+  int pasY = signe(cible->posY - exec->posY);
+  int x, y;
+  int portee = exec->portee + exec->B_portee;
+  int degats = exec->att + exec->B_att;
+  int reverse = 0;
+  Unite *unite;
+
+  x = 0;
+  y = 0;
+
+  while(((x < portee && y == 0) || (y < portee && x == 0)) && degats > 0) {
+    unite = monde->plateau[y + exec->posY][x + exec->posX];
+    if(unite != NULL && unite->couleur != exec->couleur) {
+      degats = max(attaquer(exec, cible, degats, monde), 0);
+      if(peutRiposter(*cible, *exec)) {
+        reverse += cible->att + cible->B_att;
+      }
+    }
+    x += pasX;
+    y += pasY;
+  }
+
+  infligerDegats(exec, reverse, monde);
+}
+
+int infligerDegats(Unite* cible, int degats, Monde *monde) {
+  int r = 0;
+  printf("%c%c (%d,%d) recoit %d de degats !\n", cible->genre, cible->couleur, cible->posX, cible->posY, min(degats, cible->PV));
+  cible->PV = max(cible->PV - degats, 0);
+  if(cible->PV == 0) {
+    printf("%c%c (%d,%d) disparait !\n", cible->genre, cible->couleur, cible->posX, cible->posY);
+    enleverUnite(cible, monde);
+    r = 1;
+  }
+
+  return r;
+}
+
+int attaquer(Unite* exec, Unite* cible, int d, Monde *monde) {
+  int degats;
+  int pv = cible->PV;
+  if(seProtege(*cible)) {
+    degats = ceil(d / 2);
+  } else {
+    degats = d;
+  }
+
+  cible->subis++;
+
+  if(exec->genre == SORCIERE) {
+    soigne(min(cible->PV, degats), exec);
+  }
+
+  if(infligerDegats(cible, degats, monde)) {
+    exec->kills++;
+  }
+
+
+  return (degats - pv);
+}
+
+void combat(Unite* exec, Unite *cible, Monde *monde) {
+  int fail = 0;
+  int success = (attaquer(exec, cible, exec->att + exec->B_att, monde) >= 0);
+  if(!success && peutRiposter(*cible, *exec)) {
+    fail = (attaquer(cible, exec, cible->att + cible->B_att, monde) >= 0);
+  }
+  if(!fail && !success) {
+    switch(exec->genre) {
+      case(MATRIARCHE):
+        exec->etat = PARALYSIE;
+        cible->etat = PARALYSIE;
+        break;
+      case(SERF):
+        infligerDegats(exec, 1, monde);
+        break;
+      default:
+        break;
+    }
+
+  }
+}
+
+int seProtege(Unite cible) {
+  return ((cible.genre == GUERRIER || cible.genre == BASTION) && cible.etat == ATTENTE);
+}
+
+int peutRiposter(Unite exec, Unite cible) {
+  return (exec.genre == CHAMPION && exec.etat == DEFAUT && abs(cible.posX - exec.posX) + abs(cible.posY - exec.posX) <= exec.portee + exec.B_portee);
+
+}
+
+int actionAttendre(Unite *unite, Monde *monde) {
+  int r = 3;
+
+  switch(unite->genre) {
+    case(SORCIERE):
+      r = actionAttendre_Sorciere(unite, monde);
+      break;
+    case(SAINTE):
+      r = actionAttendre_Sainte(unite, monde);
+      break;
+    default:
+      unite->etat = ATTENTE;
+      break;
+  }
+
+  return r;
+}
+
+int actionAttendre_Sorciere(Unite *unite, Monde *monde) {
+  Unite **uportee;
+  int length, selection;
+  int r = 3;
+  uportee = unitesAPortee(*unite, *monde, 1, 1, CARRE, &length);
+  if(uportee != NULL && length > 0) {
+    selection = parcourirUniteSelect(uportee, length);
+    if (selection > -1) {
+      intervertirPV(unite, uportee[selection]);
+    } else {
+      printf("Pas d'allié proche...\n");
+      r = 0;
+    }
+  } else {
+    printf("Erreur mémoire !\n");
+  }
+
+  free(uportee);
+
+  return r;
+}
+
+int actionAttendre_Sainte(Unite *unite, Monde *monde) {
+  Unite **uportee;
+  int length, i;
+  int r = 3;
+  uportee = unitesAPortee(*unite, *monde, 1, 1, CARRE, &length);
+  if(uportee != NULL && length > 0) {
+
+    for(i = 0; i < length; ++i) {
+      soigne(unite->att + unite->B_att, uportee[i]);
+    }
+
+  } else {
+    printf("Erreur mémoire !\n");
+  }
+
+  free(uportee);
+
+  return r;
+}
+
+void soigne(int soin, Unite *cible) {
+  cible->PV = min(soin + cible->PV, cible->PVmax + cible->B_PVmax);
+}
+
+void intervertirPV(Unite *exec, Unite *cible) {
+  int temp = exec->PV;
+  exec->PV = min(cible->PV, exec->PVmax + exec->B_PVmax);
+  cible->PV = min(temp, cible->PVmax + cible->B_PVmax);
+}
+
+
+/*À libérer avec free*/
+Unite **unitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme forme, int *length) {
+  int i, j, n, cond;
+  Unite **select;
+  *length = nbUnitesAPortee(unite, monde, portee, alliee, forme);
+  select = calloc(*length, sizeof(*select));
+  n = 0;
+
+  if(alliee) {  /*Debug si alliee n'est pas 1 ou 0*/
+    cond = 1;
+  } else {
+    cond = 0;
+  }
+
+  for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
+    for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
+      if(i >= 0 && i <= LARG && j >= 0 && j <= LONG
+      && (i != unite.posX || j != unite.posY)
+      && monde.plateau[j][i] != NULL
+      && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
+      && rangeShape(i, j, unite.posX, unite.posY, portee, forme)) {
+        select[n] = monde.plateau[j][i];
+        n++;
+      }
+    }
+  }
+
+  return select;
+}
+
+int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme forme) {
+  int i, j, n, cond;
+  n = 0;
+
+  if(alliee) {  /*Debug si alliee n'est pas 1 ou 0*/
+    cond = 1;
+  } else {
+    cond = 0;
+  }
+
+  for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
+    for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
+      if(i >= 0 && i <= LARG
+        && j >= 0 && j <= LONG
+        && (i != unite.posX || j != unite.posY)) {
+        n += (monde.plateau[j][i] != NULL
+          && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
+        && rangeShape(i, j, unite.posX, unite.posY, portee, forme));
+      }
+    }
+  }
+
+  return n;
+}
+
+int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) {
+  int r;
+  switch(forme) {
+    /*case(CARRE):
+      return (abs(x - centerX) <= portee && abs(y - centerY) <= portee);
+      break;*/
+    case(LOSANGE):
+      return (abs(x - centerX) + abs(y - centerY) <= portee);
+      break;
+    case(CROIX):
+      return ((abs(x - centerX) <= portee && y - centerY == 0) || (abs(y - centerY) <= portee && x - centerX == 0));
+      break;
+    default:
+      r = 1;
+      break;
+  }
+
+  return r;
+}
+
+int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
+  int posX, posY, r = 1;
   printf("Indiquer positions x,y : ");
   scanf("%d,%d", &posX, &posY);
   switch(deplacerUniteAuto(unite, monde, posX, posY, mouvements)) {
@@ -665,6 +966,7 @@ void actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
       break;
     case(0):
       printf("Erreur dans le deplacement !\n");
+      r = 0;
       break;
     case(1):
       printf("Deplacement reussi !\n");
@@ -673,14 +975,17 @@ void actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
       printf("Erreur mémoire !\n");
       break;
   }
+
+  return r;
 }
 
 void afficherUnite(Unite unite) {
-  printf("\tGenre : %c\n", unite.genre);
+  printf("\tGenre : %c\tEtat : %c\n", unite.genre, unite.etat);
   printf("\tPositions x,y : %d,%d\n", unite.posX, unite.posY);
   printf("\tStats : PV %d/%d (%d)\tATT %d (%d)\t PORTEE %d (%d)\n", unite.PV, unite.PVmax + unite.B_PVmax, unite.B_PVmax, unite.att + unite.B_att, unite.B_att, unite.portee + unite.B_portee, unite.B_portee);
 }
 
+/*BACKUP
 int attaquer(Unite *unite, Monde *monde, int destX, int destY){
     if(monde->plateau[destY][destX] !=NULL && unite->couleur!= monde->plateau[destY][destX]->couleur ){
                 if (unite->genre==GUERRIER || unite->genre==monde->plateau[destY][destX]->genre){
@@ -709,7 +1014,7 @@ int deplacerOuAttaquer(Unite *unite, Monde *monde, int destX, int destY){
         return -3;
     }
 
-    if(monde->plateau[destY][destX] == NULL && destX <= LONG && destY <= LARG && abs(destX-(unite->posX))<=1 && abs(destY-(unite->posY))<=1 ) /* On verifie que la destination existe et est vide et que c'est un déplacement adjacent */
+    if(monde->plateau[destY][destX] == NULL && destX <= LONG && destY <= LARG && abs(destX-(unite->posX))<=1 && abs(destY-(unite->posY))<=1 ) // On verifie que la destination existe et est vide et que c'est un déplacement adjacent
     {   deplacerUnite(unite,monde,destX,destY);
 
         return 1;
@@ -723,7 +1028,7 @@ int deplacerOuAttaquer(Unite *unite, Monde *monde, int destX, int destY){
         return 3;
     }
     return 0;
-}
+}*/
 
 void viderMonde(Monde *monde) {
   viderUListe(monde->rouge);

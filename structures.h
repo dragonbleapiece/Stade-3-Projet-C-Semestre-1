@@ -30,6 +30,12 @@ typedef enum Genre {
   SAINTE = 'o'
 } Genre;
 
+typedef enum Forme {
+  CARRE,
+  LOSANGE,
+  CROIX
+} Forme;
+
 typedef enum Couleur {
   ROUGE = 'R', /* identifiant du premier joueur */
   BLEU = 'B' /* identifiant du deuxième joueur */

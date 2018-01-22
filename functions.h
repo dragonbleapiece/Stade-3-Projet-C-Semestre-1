@@ -94,15 +94,16 @@ void gererTourJoueur(Couleur couleur, Monde *monde);
   / destX : destination de l'attaque en X
   / destY : destination de l'attaque en Y
 */
-int attaquer(Unite *unite, Monde *monde, int destX, int destY);
+/*int attaquer(Unite *unite, Monde *monde, int destX, int destY); BACKUP*/
 
 /**/
-int deplacerOuAttaquer(Unite *unite, Monde *monde, int destX, int destY);
+/*int deplacerOuAttaquer(Unite *unite, Monde *monde, int destX, int destY); BACKUP*/
 
 /*Renvoie l'adresse d'un tableau d'Unite* à partir d'une UListe.
   / uliste : UListe à partir de laquelle on veut créer un tableau
+  / *n : pointeur auquel on attribue la longueur du tableau
 */
-Unite **creerSelection(UListe uliste);
+Unite **creerSelection(UListe uliste, int *n);
 
 /*Renvoie le nombre d'Unite dans une UListe.
   / uliste : UListe contenant une liste chaînée d'Unite
@@ -192,7 +193,7 @@ int nombreGenre(UListe uliste, Genre genre);
 
 int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements);
 
-Coord *findWay(Coord depart, Coord dest, Monde monde);
+Coord *findPath(Coord depart, Coord dest, Monde monde);
 
 int nbDeplacement(Coord depart, Coord dest);
 
@@ -206,7 +207,7 @@ int initialiseTab(Coord **tab, size_t lengthX, size_t lengthY);
 
 void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX, int pasY, Monde monde, int lengthY);
 
-Coord *goodWay(Coord **tab, int lengthX, int lengthY);
+Coord *goodPath(Coord **tab, int lengthX, int lengthY);
 
 int min(int a, int b);
 
@@ -214,6 +215,38 @@ int max(int a, int b);
 
 void initialiseTabCoord(Coord *tab, size_t length);
 
-void actionDeplacer(Unite *unite, Monde *monde, int *mouvements);
+int actionDeplacer(Unite *unite, Monde *monde, int *mouvements);
+
+int actionAttaquer(Unite *unite, Monde *monde);
+
+void combat_Archer(Unite* exec, Unite *cible, Monde *monde);
+
+int infligerDegats(Unite* cible, int degats, Monde *monde);
+
+int attaquer(Unite* exec, Unite* cible, int d, Monde *monde);
+
+void combat(Unite* exec, Unite *cible, Monde *monde);
+
+int seProtege(Unite cible);
+
+int peutRiposter(Unite exec, Unite cible);
+
+int actionAttendre(Unite *unite, Monde *monde);
+
+int actionAttendre_Sorciere(Unite *unite, Monde *monde);
+
+int actionAttendre_Sainte(Unite *unite, Monde *monde);
+
+void soigne(int soin, Unite *cible);
+
+void intervertirPV(Unite *exec, Unite *cible);
+
+Unite **unitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme forme, int *length);
+
+int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme forme);
+
+int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme);
+
+
 
 #endif /* FUNCTIONS_H_INCLUDED */
