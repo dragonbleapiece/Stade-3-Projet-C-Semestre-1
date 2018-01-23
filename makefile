@@ -8,7 +8,7 @@ endif
 
 CC=gcc
 CFLAGS=-W -Wall -ansi -pedantic
-LDFLAGS=
+LDFLAGS= -lm
 EXEC=jeu
 SRC= $(wildcard *.c)
 OBJ= $(SRC:.c=.o)

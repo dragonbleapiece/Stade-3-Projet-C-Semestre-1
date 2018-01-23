@@ -240,7 +240,7 @@ Unite *dernier(UListe uliste) {
 }
 
 int placerAuMonde(Unite *unite, Monde *monde, size_t posX, size_t posY) {
-  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY => LONG || posX => LARG) {
+  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY >= LONG || posX >= LARG) {
     return 0;
   } else {
     unite->posX = posX;
