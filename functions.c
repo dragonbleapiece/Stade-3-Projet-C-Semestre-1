@@ -240,7 +240,7 @@ Unite *dernier(UListe uliste) {
 }
 
 int placerAuMonde(Unite *unite, Monde *monde, size_t posX, size_t posY) {
-  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY > LONG || posX > LARG) {
+  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY => LONG || posX => LARG) {
     return 0;
   } else {
     unite->posX = posX;
@@ -1532,7 +1532,6 @@ int nbPlacesAPortee(Unite unite, Monde monde, int portee, Forme forme) {
 }
 
 int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) {
-  int r;
   switch(forme) {
     /*case(CARRE):
       return (abs(x - centerX) <= portee && abs(y - centerY) <= portee);
@@ -1544,11 +1543,10 @@ int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) 
       return ((abs(x - centerX) <= portee && y - centerY == 0) || (abs(y - centerY) <= portee && x - centerX == 0));
       break;
     default:
-      r = 1;
+      return 1;
       break;
   }
 
-  return r;
 }
 
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
