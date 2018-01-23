@@ -16,12 +16,14 @@ int initialiserMonde(Monde *monde){
     }
     (monde->rouge)->couleur = ROUGE;
     (monde->rouge)->unites = NULL;
+    (monde->rouge)->champion = 0;
     (monde->bleu) = calloc(1, sizeof(*(monde->bleu)));
     if((monde->bleu) == NULL) {
       return 0;
     }
     (monde->bleu)->couleur = BLEU;
     (monde->bleu)->unites = NULL;
+    (monde->bleu)->champion = 0;
     return 1;
 }
 
@@ -238,7 +240,7 @@ Unite *dernier(UListe uliste) {
 }
 
 int placerAuMonde(Unite *unite, Monde *monde, size_t posX, size_t posY) {
-  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY >= LONG || posX >= LARG) {
+  if(unite == NULL || monde->plateau[posY][posX] != NULL || posY > LONG || posX > LARG) {
     return 0;
   } else {
     unite->posX = posX;
@@ -337,18 +339,25 @@ void ligne() {
 
 int deplacerUnite(Unite *unite, Monde *monde, int destX, int destY){
   if(monde->plateau[destY][destX] == NULL) {
-    if(destX <= LARG
-      && destY <= LONG
-      && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= 1)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
-    {
-                    monde->plateau[unite->posY][unite->posX]=NULL;
-                    unite->posX = destX;
-                    unite->posY = destY;
-                    monde->plateau[destY][destX] = unite;
-                    return 1;
+    if((unite->genre == BASTION && nbUnitesAPortee(*unite, *monde, 1, 0, CROIX) == 0) || unite->genre != BASTION) {
+      if(destX < LARG
+        && destY < LONG
+        && destX >= 0
+        && destY >= 0
+        && !(destX == unite->posX && destY == unite->posY))
+      {
+                      monde->plateau[unite->posY][unite->posX]=NULL;
+                      unite->posX = destX;
+                      unite->posY = destY;
+                      monde->plateau[destY][destX] = unite;
+                      return 1;
+      } else {
+        return 0;
+      }
     } else {
-      return 0;
+      return -1;
     }
+
   } else {
     return -1;
   }
@@ -356,8 +365,8 @@ int deplacerUnite(Unite *unite, Monde *monde, int destX, int destY){
 }
 
 int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements) {
-    if(destX <= LARG
-      && destY <= LONG
+    if(destX < LARG
+      && destY < LONG
       && destX >= 0
       && destY >= 0
       && !(destX == unite->posX && destY == unite->posY)
@@ -555,6 +564,18 @@ UListe *getUListe(Couleur couleur, Monde *monde) {
 
 }
 
+UListe *getUListeAdverse(Couleur couleur, Monde *monde) {
+  if(couleur == (monde->rouge)->couleur) {
+    return (monde->bleu);
+  }
+  else if(couleur == (monde->bleu)->couleur) {
+    return (monde->rouge);
+  }
+  else {
+    return NULL;
+  }
+}
+
 Unite *getUnitePrec(Unite *unite, UListe *uliste) {
   Unite *search;
   search = uliste->unites;
@@ -568,11 +589,12 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   int selection;
   char cmd;
   UListe uliste = *getUListe(couleur, monde);
+  UListe adverse = *getUListeAdverse(couleur, monde);
   int nUnite;
   Unite **uniteSelect;
   int action, mouvements;
 
-
+  attaqueAutoBastion(uliste, monde);
   evolution(uliste, *monde);
   attente(uliste, monde);
 
@@ -595,8 +617,14 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
           nUnite = enleverTab(uniteSelect, selection, nUnite, sizeof(*uniteSelect));
         }
         affichePlateau(*monde);
-        printf("Voulez-vous arreter votre tour ? (o/n)\n");
-        scanf(" %c", &cmd);
+
+        if(nombreUnite(adverse) > 0 && !aPerduChampion(adverse)) {
+          printf("Voulez-vous arreter votre tour ? (o/n)\n");
+          scanf(" %c", &cmd);
+        } else {
+          cmd = 'o';
+        }
+
       } else {
         if(mouvements <= 0) {
           printf("Vous n'avez plus aucun ordre à donner.\n");
@@ -617,8 +645,35 @@ void debutTourJoueur(UListe uliste, Monde *monde, Unite **tab, int length) {
   renforceGuerriers(tab, length);
   reinitialiseBonusMalus(tab, length);
   if(mater != NULL) {
-    augmenteEvoMatriarche(getUniteByGenre(uliste, MATRIARCHE), *monde);
+    augmenteEvoMatriarche(mater, *monde);
   }
+}
+
+void attaqueAutoBastion(UListe uliste, Monde *monde) {
+  int length, i;
+  Unite **bastions = creerSelectionGenre(uliste, BASTION, &length);
+  for(i = 0; i < length; ++i) {
+    attaqueZone(&(bastions[i]), monde, 1, CARRE);
+  }
+  free(bastions);
+}
+
+void attaqueZone(Unite **exec, Monde *monde, int portee, Forme forme) {
+  int length;
+  int i, d, reverse;
+  Unite **zone = unitesAPortee(**exec, *monde, portee, 0, forme, &length);
+  reverse = 0;
+  for(i = 0; i < length; ++i) {
+    d = attaquer(exec, &(zone[i]), (*exec)->att + (*exec)->B_att, monde);
+    if(d < 0 && peutRiposter(*zone[i], **exec)) {
+      reverse += zone[i]->att + zone[i]->B_att;
+    }
+  }
+  if(seProtege(**exec)) {
+    reverse = ceil(reverse / 2);
+  }
+  infligerDegats(exec, reverse, monde);
+  free(zone);
 }
 
 void renforceGuerriers(Unite **tab, int length) {
@@ -698,6 +753,7 @@ void evoluer(Unite *unite, Monde monde) {
       break;
     case(CHAMPION):
       upChampion(unite);
+      getUListe(unite->couleur, &monde)->champion = 1;
       break;
     case(SORCIERE):
       upSorciere(unite);
@@ -790,6 +846,25 @@ Unite **creerSelection(UListe uliste, Etat etat, int *n) {
   i = 0;
   while(i < *n && unite != NULL) {
     if(unite->etat == etat) {
+      tab[i] = unite;
+      ++i;
+    }
+    unite = unite->suiv;
+  }
+
+  return tab;
+}
+
+Unite **creerSelectionGenre(UListe uliste, Genre genre, int *n) {
+  int i;
+  Unite **tab;
+  Unite *unite;
+  *n = nombreGenre(uliste, genre);
+  tab = calloc(*n, sizeof(*tab));
+  unite = uliste.unites;
+  i = 0;
+  while(i < *n && unite != NULL) {
+    if(unite->genre == genre) {
       tab[i] = unite;
       ++i;
     }
@@ -1372,7 +1447,7 @@ Unite **unitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme fo
 
   for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
     for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
-      if(i >= 0 && i <= LARG && j >= 0 && j <= LONG
+      if(i >= 0 && i < LARG && j >= 0 && j < LONG
       && (i != unite.posX || j != unite.posY)
       && monde.plateau[j][i] != NULL
       && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
@@ -1398,7 +1473,7 @@ Coord *placesAPortee(Unite unite, Monde monde, int portee, Forme forme, int *len
 
   for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
     for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
-      if(i >= 0 && i <= LARG && j >= 0 && j <= LONG
+      if(i >= 0 && i < LARG && j >= 0 && j < LONG
       && (i != unite.posX || j != unite.posY)
       && monde.plateau[j][i] == NULL
       && rangeShape(i, j, unite.posX, unite.posY, portee, forme)) {
@@ -1425,8 +1500,8 @@ int nbUnitesAPortee(Unite unite, Monde monde, int portee, int alliee, Forme form
 
   for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
     for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
-      if(i >= 0 && i <= LARG
-        && j >= 0 && j <= LONG
+      if(i >= 0 && i < LARG
+        && j >= 0 && j < LONG
         && (i != unite.posX || j != unite.posY)) {
         n += (monde.plateau[j][i] != NULL
           && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
@@ -1444,8 +1519,8 @@ int nbPlacesAPortee(Unite unite, Monde monde, int portee, Forme forme) {
 
   for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
     for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
-      if(i >= 0 && i <= LARG
-        && j >= 0 && j <= LONG
+      if(i >= 0 && i < LARG
+        && j >= 0 && j < LONG
         && (i != unite.posX || j != unite.posY)) {
         n += (monde.plateau[j][i] == NULL
         && rangeShape(i, j, unite.posX, unite.posY, portee, forme));
@@ -1478,21 +1553,38 @@ int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) 
 
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
   int posX, posY, r = 1;
+  Unite copie = *unite;
   printf("Indiquer positions x,y : ");
   scanf("%d,%d", &posX, &posY);
-  switch(deplacerUniteAuto(unite, monde, posX, posY, mouvements)) {
+  copie.posX = posX;
+  copie.posY = posY;
+  if((unite->genre == MATRIARCHE || unite->genre == SORCIERE || unite->genre == SAINTE) && nbUnitesAPortee(copie, *monde, 1, 1, CROIX) > 0) {
+
+    r = deplacerUnite(unite, monde, posX, posY);
+
+  } else if (unite->genre == ASSASSIN && nbUnitesAPortee(copie, *monde, 1, 0, CROIX) > 0){
+
+    r = deplacerUnite(unite, monde, posX, posY);
+
+  } else {
+
+    r = deplacerUniteAuto(unite, monde, posX, posY, mouvements);
+
+  }
+  switch(r) {
     case(-1):
       printf("Obstacle rencontre !\n");
       break;
     case(0):
       printf("Erreur dans le deplacement !\n");
-      r = 0;
       break;
     case(1):
       printf("Deplacement reussi !\n");
       break;
-    case(2):
+    case(-2):
       printf("Erreur mémoire !\n");
+      break;
+    default:
       break;
   }
 
@@ -1574,8 +1666,14 @@ void gererTour(Monde *monde) {
 
     ++(monde->tour);
     gererTourJoueur(ROUGE, monde);
-    gererTourJoueur(BLEU, monde);
+    if(nombreUnite(*(monde->bleu)) > 0 && nombreUnite(*(monde->rouge)) > 0 && !aPerduChampion(*(monde->bleu)) && !aPerduChampion(*(monde->rouge))) {
+      gererTourJoueur(BLEU, monde);
+    }
 
+}
+
+int aPerduChampion(UListe uliste) {
+  return (nombreGenre(uliste, CHAMPION) == 0 && uliste.champion == 1);
 }
 
 void placerUnite(Monde *monde, UListe *uliste, Genre genre){
@@ -1592,43 +1690,40 @@ void placerUnite(Monde *monde, UListe *uliste, Genre genre){
 
 void placementParJoueur(Monde *monde, Couleur couleur){
     UListe *uliste=getUListe(couleur,monde);
-    printf("Ou voulez-vous positionner vos deux serfs ? \n ");
-    placerUnite(monde,uliste,SERF);
-    placerUnite(monde,uliste,SERF);
-    /*printf(" Placez vos guerriers. \n");
-    placerUnite(monde,uliste,GUERRIER);
-    placerUnite(monde,uliste,GUERRIER);
-    placerUnite(monde,uliste,GUERRIER);
-    printf(" Placez votre Matriarche. \n");
-    placerUnite(monde,uliste,MATRIARCHE);*/
+    int i = 0;
+    placerAuMonde(creerUnite(MATRIARCHE, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
+    i++;
+    placerAuMonde(creerUnite(SERF, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
+    i++;
+    placerAuMonde(creerUnite(SERF, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
+    i++;
+    placerAuMonde(creerUnite(GUERRIER, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
+    i++;
+    placerAuMonde(creerUnite(GUERRIER, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
+    i++;
+    placerAuMonde(creerUnite(GUERRIER, uliste, monde->tour), monde, abs((couleur == BLEU) * (LARG - 1) - i), (couleur == BLEU) * (LONG - 1));
 }
 
 void placementInitial(Monde *monde){
-    char couleur;
-    printf("Qui commence ? (R/B) \n");
-    scanf(" %c",&couleur);
-    while(couleur != ROUGE && couleur != BLEU) {
-      printf("Veuillez utiliser les commandes indiquees !\n");
-      scanf(" %c",&couleur);
-    }
-    placementParJoueur(monde,couleur);
-    printf("À l'autre joueur de placer ses unités :) \n");
-    if('B' == couleur){
-    placementParJoueur(monde,ROUGE);
-  } else {
-    placementParJoueur(monde,BLEU);
-  }
+    placementParJoueur(monde, ROUGE);
+    placementParJoueur(monde, BLEU);
 }
 
-int arreterPartie(){
+int arreterPartie(Monde monde){
     char reponse;
-    printf("Voulez vous quitter la partie ? (o/n)\n");
-    scanf(" %c",&reponse);
-    if('o' == reponse){
+    if((nombreUnite(*(monde.rouge)) > 0
+    && nombreUnite(*(monde.bleu)) > 0)
+    && !aPerduChampion(*(monde.rouge))
+    && !aPerduChampion(*(monde.bleu))) {
+      printf("Voulez vous continuer la partie ? (o/n)\n");
+      scanf(" %c",&reponse);
+      if('n' == reponse){
 
-        printf("Merci d'avoir joué \n");
-        return 1;
+          printf("Merci d'avoir joué \n");
+          return 1;
+      }
     }
+
     return 0;
 }
 
@@ -1644,13 +1739,17 @@ void gererPartie(void){
     placementInitial(&mondejeu);
     printf("Debut de la partie \n ");
     affichePlateau(mondejeu);
-    while( !arret && (nombreUnite(*(mondejeu.rouge)) > 0 && nombreUnite(*(mondejeu.bleu)) > 0)) {
+    while( !arret
+      && (nombreUnite(*(mondejeu.rouge)) > 0
+      && nombreUnite(*(mondejeu.bleu)) > 0)
+      && !aPerduChampion(*(mondejeu.rouge))
+      && !aPerduChampion(*(mondejeu.bleu))) {
     gererTour(&mondejeu);
-    arret = arreterPartie();
+    arret = arreterPartie(mondejeu);
     }
         /*viderMonde(&mondejeu);*/
     if(!arret) {
-      if (nombreUnite(*(mondejeu.bleu)) <= 0)
+      if (nombreUnite(*(mondejeu.bleu)) <= 0 || aPerduChampion(*(mondejeu.bleu)))
       {
           printf("Fin de la partie, le joueur ROUGE a gagne !");
       } else {

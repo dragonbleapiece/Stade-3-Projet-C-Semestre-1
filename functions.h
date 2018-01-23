@@ -99,8 +99,9 @@ void gererTourJoueur(Couleur couleur, Monde *monde);
 /**/
 /*int deplacerOuAttaquer(Unite *unite, Monde *monde, int destX, int destY); BACKUP*/
 
-/*Renvoie l'adresse d'un tableau d'Unite* à partir d'une UListe.
+/*Renvoie l'adresse d'un tableau d'Unite* à l'état signifié à partir d'une UListe.
   / uliste : UListe à partir de laquelle on veut créer un tableau
+  / etat : état correspondant à l'état des Unite renvoyées
   / *n : pointeur auquel on attribue la longueur du tableau
 */
 Unite **creerSelection(UListe uliste, Etat etat, int *n);
@@ -176,8 +177,9 @@ void placementParJoueur(Monde *monde, Couleur couleur);
 void placementInitial(Monde *monde);
 
 /*Demande aux joueurs s'ils souhaitent arrêter la partie. Renvoie 1 si ils acceptent, renvoie 0 sinon.
+  / monde : Monde dans lequel le jeu se joue
 */
-int arreterPartie();
+int arreterPartie(Monde monde);
 
 /*Démarre la partie.
 */
@@ -306,5 +308,15 @@ void augmenteEvoMatriarche(Unite *unite, Monde monde);
 int actionEvoluer(Unite *unite, Monde *monde);
 
 char *checkEvolutions(Unite unite, Monde monde);
+
+void attaqueAutoBastion(UListe uliste, Monde *monde);
+
+void attaqueZone(Unite **exec, Monde *monde, int portee, Forme forme);
+
+Unite **creerSelectionGenre(UListe uliste, Genre genre, int *n);
+
+int aPerduChampion(UListe uliste);
+
+UListe *getUListeAdverse(Couleur couleur, Monde *monde);
 
 #endif /* FUNCTIONS_H_INCLUDED */

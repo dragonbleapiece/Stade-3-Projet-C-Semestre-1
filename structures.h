@@ -74,6 +74,7 @@ typedef struct Coord {
 typedef struct UListe{
   Unite *unites;
   Couleur couleur;
+  int champion;
 } UListe;
 
 
