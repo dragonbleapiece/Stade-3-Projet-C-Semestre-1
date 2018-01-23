@@ -588,53 +588,56 @@ Unite *getUnitePrec(Unite *unite, UListe *uliste) {
 void gererTourJoueur(Couleur couleur, Monde *monde) {
   int selection;
   char cmd;
-  UListe uliste = *getUListe(couleur, monde);
+  UListe *uliste = getUListe(couleur, monde);
   UListe adverse = *getUListeAdverse(couleur, monde);
   int nUnite;
   Unite **uniteSelect;
   int action, mouvements;
 
-  attaqueAutoBastion(uliste, monde);
-  evolution(uliste, *monde);
-  attente(uliste, monde);
+  attaqueAutoBastion(*uliste, monde);
+  evolution(*uliste, *monde);
+  attente(*uliste, monde);
 
-  mouvements = nombreGenre(uliste, SERF) + 1;
-  uniteSelect = creerSelection(uliste, DEFAUT, &nUnite);
+  mouvements = nombreGenre(*uliste, SERF) + 1;
+  uniteSelect = creerSelection(*uliste, DEFAUT, &nUnite);
 
   if(nUnite && uniteSelect != NULL) {
     affichePlateau(*monde);
     printf("Tour : %d | Joueur : %c\n", monde->tour, couleur);
 
-    debutTourJoueur(uliste, monde, uniteSelect, nUnite);
+    debutTourJoueur(*uliste, monde, uniteSelect, nUnite);
 
 
     do {
       printf("Points de mouvement : %d\n", mouvements);
       selection = parcourirUniteSelect(uniteSelect, &nUnite);
-      if(selection > -1 && mouvements > 0) {
-        action = actionUnite(&(uniteSelect[selection]), monde, &mouvements);
-        if(action == 4 || action == 3) {
-          nUnite = enleverTab(uniteSelect, selection, nUnite, sizeof(*uniteSelect));
-        }
-        affichePlateau(*monde);
+      if(mouvements > 0) {
+        if(selection > -1) {
+          action = actionUnite(&(uniteSelect[selection]), monde, &mouvements);
+          if(action == 4 || action == 3) {
+            nUnite = enleverTab(uniteSelect, selection, nUnite, sizeof(*uniteSelect));
+          }
+          affichePlateau(*monde);
 
-        if(nombreUnite(adverse) > 0 && !aPerduChampion(adverse)) {
-          printf("Voulez-vous arreter votre tour ? (o/n)\n");
-          scanf(" %c", &cmd);
+          if(nombreUnite(adverse) > 0 && !aPerduChampion(adverse)) {
+            printf("Voulez-vous arreter votre tour ? (o/n)\n");
+            scanf(" %c", &cmd);
+          } else {
+            cmd = 'o';
+          }
+
         } else {
+          printf("Arret du tour !\n");
           cmd = 'o';
         }
-
       } else {
-        if(mouvements <= 0) {
-          printf("Vous n'avez plus aucun ordre à donner.\n");
-        }
+        printf("Vous n'avez plus aucun ordre à donner.\n");
         printf("Arret du tour !\n");
         cmd = 'o';
       }
     } while(cmd != 'o');
 
-    /*finTourJoueur*/paralysie(uliste);
+    /*finTourJoueur*/paralysie(*uliste);
 
     free(uniteSelect);
   }
@@ -670,7 +673,7 @@ void attaqueZone(Unite **exec, Monde *monde, int portee, Forme forme) {
     }
   }
   if(seProtege(**exec)) {
-    reverse = ceil(reverse / 2);
+    reverse = ceil((float)reverse / 2.0);
   }
   infligerDegats(exec, reverse, monde);
   free(zone);
@@ -1553,16 +1556,25 @@ int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
   int posX, posY, r = 1;
   Unite copie = *unite;
   printf("Indiquer positions x,y : ");
-  scanf("%d,%d", &posX, &posY);
+  while(scanf("%d,%d", &posX, &posY) < 2) {
+    printf("Coordonnees incorrectes !\n");
+  }
   copie.posX = posX;
   copie.posY = posY;
   if((unite->genre == MATRIARCHE || unite->genre == SORCIERE || unite->genre == SAINTE) && nbUnitesAPortee(copie, *monde, 1, 1, CROIX) > 0) {
-
+    /*considère la condition comme vraie si elle se déplace d'une case*/
+    /*ce qui ne change pas le résultat du déplacement*/
     r = deplacerUnite(unite, monde, posX, posY);
+    if(r > 0) {
+      (*mouvements)--;
+    }
 
   } else if (unite->genre == ASSASSIN && nbUnitesAPortee(copie, *monde, 1, 0, CROIX) > 0){
 
     r = deplacerUnite(unite, monde, posX, posY);
+    if(r > 0) {
+      (*mouvements)--;
+    }
 
   } else {
 
