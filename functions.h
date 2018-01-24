@@ -323,4 +323,7 @@ int nbGenreAPortee(Unite unite, Monde monde, int portee, Genre genre, int alliee
 
 void afficherInfoGenre(Genre genre);
 
+/*Purge le scanf. Résoud bug.*/
+void purge(void);
+
 #endif /* FUNCTIONS_H_INCLUDED */

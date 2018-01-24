@@ -1682,13 +1682,20 @@ int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) 
 
 }
 
+void purge(void)
+{
+        int c = 0;
+
+        while((c = getchar()) != '\n' && c != EOF);
+}
+
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
   int posX, posY, scan, r = 1;
   Unite copie = *unite;
   printf("Indiquer positions x,y : ");
   while((scan = scanf("%d,%d", &posX, &posY)) < 2) {
-    printf("Coordonnees incorrectes !\n");
-    scan = scanf("%d,%d", &posX, &posY);
+    printf("Coordonnees Invalides !\n");
+    purge();
   }
   copie.posX = posX;
   copie.posY = posY;
