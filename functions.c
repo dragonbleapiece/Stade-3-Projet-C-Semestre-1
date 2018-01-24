@@ -595,6 +595,7 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
   int action, mouvements;
 
   attaqueAutoBastion(*uliste, monde);
+  reinitialiseBonusMalus(uliste);
   evolution(*uliste, *monde);
   attente(*uliste, monde);
 
@@ -646,7 +647,6 @@ void gererTourJoueur(Couleur couleur, Monde *monde) {
 void debutTourJoueur(UListe uliste, Monde *monde, Unite **tab, int length) {
   Unite *mater = getUniteByGenre(uliste, MATRIARCHE);
   renforceGuerriers(tab, length);
-  reinitialiseBonusMalus(tab, length);
   if(mater != NULL) {
     augmenteEvoMatriarche(mater, *monde);
   }
@@ -709,14 +709,15 @@ Unite *getUniteByGenre(UListe uliste, Genre genre) {
   return unite;
 }
 
-void reinitialiseBonusMalus(Unite **tab, int length) {
-  int i;
-  for(i = 0; i < length; ++i) {
-    tab[i]->B_att = 0;
-    tab[i]->B_PVmax = 0;
-    tab[i]->PV = min(tab[i]->PV, tab[i]->PVmax);
-    tab[i]->B_portee = 0;
-  }
+void reinitialiseBonusMalus(UListe *uliste) {
+    Unite *unite = uliste->unites;
+    while(unite != NULL && unite->suiv != NULL) {
+      unite->B_att = 0;
+      unite->B_PVmax = 0;
+      unite->PV = min(unite->PV, unite->PVmax);
+      unite->B_portee = 0;
+      unite = unite->suiv;
+    }
 }
 
 
@@ -725,7 +726,6 @@ void evolution(UListe uliste, Monde monde) {
   int nUnite, i;
   Unite **tab = creerSelection(uliste, EVOLUTION, &nUnite);
   if(tab != NULL) {
-    reinitialiseBonusMalus(tab, nUnite);
     for(i = 0; i < nUnite; ++i) {
       evoluer(tab[i], monde);
     }
@@ -785,7 +785,6 @@ void attente(UListe uliste, Monde *monde) {
   int nUnite, i;
   Unite **tab = creerSelection(uliste, ATTENTE, &nUnite);
   if(tab != NULL) {
-    reinitialiseBonusMalus(tab, nUnite);
     for(i = 0; i < nUnite; ++i) {
       attendre(tab[i], monde);
     }
@@ -803,6 +802,8 @@ void attendre(Unite *unite, Monde *monde) {
       if(rand_a_b(0,100) < 50) {
         production(*unite, monde, SERF, CROIX, 1);
       }
+    case(ARCHER):
+      unite->B_portee = 3;
       break;
     default:
       break;
@@ -830,7 +831,6 @@ void paralysie(UListe uliste) {
   int nUnite, i;
   Unite **tab = creerSelection(uliste, PARALYSIE, &nUnite);
   if(tab != NULL) {
-    reinitialiseBonusMalus(tab, nUnite);
     for(i = 0; i < nUnite; ++i) {
       tab[i]->etat = DEFAUT;
     }
@@ -924,16 +924,20 @@ int parcourirUniteSelect(Unite **tab, int *length) {
   int i = -1;
   printf("--------LISTE UNITES--------\n");
   while(cmd != 'o' && *length > 0) {
-    if(i + 1 < *length) {
-      ++i;
+    if(cmd == 'i') {
+      afficherInfoGenre(tab[i]->genre);
     } else {
-      i = 0;
+      if(i + 1 < *length) {
+        ++i;
+      } else {
+        i = 0;
+      }
     }
     if(tab[i] == NULL) {
       *length = enleverTab(tab, i, *length, sizeof(*tab));
     } else {
       afficherUnite(*tab[i]);
-      printf("Voulez-vous le selectionner ? (o/n)\n");
+      printf("Voulez-vous le selectionner ? (o/n/i = info)\n");
       scanf(" %c", &cmd);
       printf("----------------------------\n");
     }
@@ -948,6 +952,79 @@ int parcourirUniteSelect(Unite **tab, int *length) {
   return i;
 }
 
+
+void afficherInfoGenre(Genre genre) {
+  char *symbol = getSymbol(genre);
+  printf("+++++++INFORMATIONS+++++++\n");
+  switch(genre) {
+    case(GUERRIER):
+      printf("Le GUERRIER note '%s' est l'unite offensive et defensive principale.\n", symbol);
+      printf("Il a une portee d'attaque de 1 et peut se proteger en mode 'attente' ce qui divise ses degats par deux.\n");
+      printf("Quand ses PV descendent a 5 ou moins, il recoit une seule fois une augmentation d'attaque de 5 qui perdurent apres augmentation de classe.\n");
+      break;
+    case(SERF):
+      printf("Le SERF note '%s' est l'unite de base de presque toutes les unites.\n", symbol);
+      printf("Il a une faible attaque, subit un contrcoup quand il attaque, mais leur nombre permet d'augmenter le nombre d'ordres que le joueur peut donner a ses unites.\n");
+      break;
+    case(MATRIARCHE):
+      printf("La MATRIARCHE note '%s' est l'unite de production de SERFS.\n", symbol);
+      printf("En 'attente' elle a 50%% de chance de produire un SERF a proximite si la place s'y prete.\n");
+      printf("Elle a de tres faibles stats. Mais peut se deplacer aupres de n'importe quelle unite alliee.\n");
+      printf("Elle peut aussi paralyser une unite ennemie en l'attaquant. Mais elle subit le meme etat apres le combat.\n");
+      printf("Elle a une portee de 3.\n");
+      break;
+    case(ASSASSIN):
+      printf("L'ASSASSIN note '%s' est l'une des unites les plus puissantes.\n", symbol);
+      printf("Il peut se deplacer pres de n'importe quelle unite ennemie puis l'attaquer sans tenir compte de la protection. Cependant, il ne peut attaquer qu'une seule fois par tour.\n");
+      break;
+    case(ARCHER):
+      printf("L'ARCHER note '%s' est l'unite de distance principale.\n", symbol);
+      printf("Il attaque seulement en ligne droite mais peut infliger des degats a plusieurs ennemis si son attaque est assez puissante\n");
+      printf("Sa portee peut doubler le tour d'apres s'il est en attente.\n");
+      printf("Il a une portee de 3.");
+      break;
+    case(BARDE):
+      printf("Le BARDE note '%s' est l'unite de soutien\n", symbol);
+      printf("Quand il attaque un ennemi, il inflige a lui et aux ennemis proches un malus d'attaque de 2.\n");
+      printf("En attente, il peut donner un bonus d'attaque de 3 a un allie a portee\n");
+      break;
+    case(DUC):
+      printf("Le DUC note '%s' est la deuxieme unite productrice.\n", symbol);
+      printf("Quand l'unite tue une unite ennemie, il produit un SERF mais sa force de frappe dimine de 2 a chaque unite cree.\n");
+      break;
+    case(ARCHIDUC):
+      printf("L'ARCHIDUC note '%s' est l'unite à la puissance de frappe variable.\n", symbol);
+      printf("A defaut d'une baisse de PV, l'unite inflige un montant de degats equivalent au nombre de SERFS que possedent le joueur incremente de 1.\n");
+      break;
+    case(BASTION):
+      printf("Le BASTION note '%s' est l'unite a la defense la plus haute.", symbol);
+      printf("Son atout reside dans ses PV et sa capacite a reduire les degats en mode 'attente'. De plus il attaque automatiquement les unites ennemies alentours sans depense de point de mouvement.\n");
+      printf("Cependant, il ne peut se deplacer tant qu'il y a des unites ennemies proches de lui\n");
+      break;
+    case(CHAMPION):
+      printf("Le CHAMPION note '%s' est l'unite ultime.\n", symbol);
+      printf("Tous les SERFS proches de lui peuvent evoluer en GUERRIER sans attendre 3 tours minimum.\n");
+      printf("Le CHAMPION peut riposter a toutes les attaques qu'il subit tant que son attaquant est a sa portee.\n");
+      printf("Cependant, sa perte signifie la defaite du Joueur.\n");
+      break;
+    case(SORCIERE):
+      printf("La SORCIERE note '%s' est l'unite de soutien offensive.\n", symbol);
+      printf("A l'instar de la MATRIARCHE elle peut se deplacer pres d'une unite alliee.\n");
+      printf("Sa puissance d'attaque equivaut a son attaque incremente de ses PV manquants. Elle se regenere du montant de degats infliges.\n");
+      printf("En ordre d'attente, elle peut intervertir ses PV avec un allie proche.\n");
+      break;
+    case(SAINTE):
+      printf("La SAINTE note '%s' est la seule unite de soin.\n", symbol);
+      printf("A l'instar de la MATRIARCHE elle peut se deplacer pres d'une unite alliee.\n");
+      printf("En ordre d'attente elle soigne les allies proches du montant de son attaque.");
+      break;
+    default:
+    printf("Bon ecoute mon pote. Je ne sais pas comment t'as fait pour atterrir la mais c'est pas comme ca que le jeu se joue. Alors tu recommences une partie comme un gentil gars (ou une gentille fille) et tu ne fais plus de connerie. Merci.\n");
+      break;
+  }
+  printf("++++++++++++++++++++++++++\n");
+  free(symbol);
+}
 
 /*fonction générique*/
 int enleverTab(void *tab, size_t indice, size_t length, size_t size) {
@@ -1096,6 +1173,32 @@ int actionEvoluer(Unite *unite, Monde *monde) {
   return r;
 }
 
+int nbGenreAPortee(Unite unite, Monde monde, int portee, Genre genre, int alliee, Forme forme) {
+  int i, j, n, cond;
+  n = 0;
+
+  if(alliee) {  /*Debug si alliee n'est pas 1 ou 0*/
+    cond = 1;
+  } else {
+    cond = 0;
+  }
+
+  for(i = unite.posX - portee; i <= unite.posX + portee; ++i) {
+    for(j = unite.posY - portee; j <= unite.posY + portee; ++j) {
+      if(i >= 0 && i < LARG
+        && j >= 0 && j < LONG
+        && (i != unite.posX || j != unite.posY)) {
+        n += (monde.plateau[j][i] != NULL
+          && ((monde.plateau[j][i])->couleur == unite.couleur) == cond
+          && monde.plateau[j][i]->genre == genre
+        && rangeShape(i, j, unite.posX, unite.posY, portee, forme));
+      }
+    }
+  }
+
+  return n;
+}
+
 /*À libérer avec free*/
 char *checkEvolutions(Unite unite, Monde monde) {
   char *evo = calloc(MAXEVO + 1, sizeof(*evo));
@@ -1106,7 +1209,7 @@ char *checkEvolutions(Unite unite, Monde monde) {
         evo[i] = ASSASSIN;
         ++i;
       }
-      if(monde.tour - unite.tour >= 3) {
+      if(monde.tour - unite.tour >= 3 || nbGenreAPortee(unite, monde, 1, CHAMPION, 1, CARRE) > 0) {
         evo[i] = GUERRIER;
         ++i;
       }
@@ -1191,7 +1294,7 @@ int actionAttaquer(Unite **unite, Monde *monde) {
         }
         break;
     }
-  if(*unite == NULL || (*unite)->etat == PARALYSIE) {
+  if(*unite == NULL || (*unite)->etat == PARALYSIE || (*unite)->etat == ATTENTE) {
     r = 0;
   }
 
@@ -1245,17 +1348,13 @@ int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
   int degats;
   Genre genreCible = (*cible)->genre;
   int pv = (*cible)->PV;
-  if(seProtege(**cible)) {
+  if(seProtege(**cible) && (*exec)->genre != ASSASSIN) {
     degats = ceil((float) d / 2.0);
   } else {
     degats = d;
   }
 
   (*cible)->subis++;
-
-  if((*exec)->genre == SORCIERE) {
-    soigne(min((*cible)->PV, degats), *exec);
-  }
 
   if(infligerDegats(cible, degats, monde)) {
     (*exec)->kills++;
@@ -1271,16 +1370,52 @@ int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
 void combat(Unite **exec, Unite **cible, Monde *monde) {
   int fail = 0;
   int degats = (*exec)->att + (*exec)->B_att;
+  int d;
 
-  if((*exec)->genre == ARCHIDUC) {
-    degats += nombreGenre(*getUListe((*exec)->couleur, monde), SERF);
+  switch((*exec)->genre) {
+    case(ARCHIDUC):
+      degats += nombreGenre(*getUListe((*exec)->couleur, monde), SERF);
+      break;
+    case(SORCIERE):
+      degats += (*exec)->PVmax + (*exec)->B_PVmax - (*exec)->PV;
+    default:
+      break;
   }
 
-  int success = (attaquer(exec, cible, degats, monde) >= 0);
+  d = attaquer(exec, cible, degats, monde);
+
+  int success = (d >= 0);
   if(!success && peutRiposter(**cible, **exec)) {
     fail = (attaquer(cible, exec, (*cible)->att + (*cible)->B_att, monde) >= 0);
   }
 
+
+  if(success) {
+    switch((*exec)->genre) {
+      case(DUC):
+        production(**exec, monde, SERF, CROIX, 1);
+        (*exec)->att = min((*exec)->att - 2, 1);
+        break;
+      default:
+        break;
+    }
+  }
+
+  if(!fail) {
+    switch((*exec)->genre) {
+      case(ASSASSIN):
+        (*exec)->etat = ATTENTE;
+        break;
+      case(BARDE):
+        infligeMalusZone(*cible, *monde, 1, CROIX, MALUS_BARDE);
+        break;
+      case(SORCIERE):
+        soigne(min(degats - d, degats), *exec);
+        break;
+      default:
+        break;
+    }
+  }
 
   if(!fail && !success) {
     switch((*exec)->genre) {
@@ -1292,12 +1427,7 @@ void combat(Unite **exec, Unite **cible, Monde *monde) {
         infligerDegats(exec, 1, monde);
         break;
       case(BARDE):
-        infligeMalusZone(*cible, *monde, 1, CROIX, MALUS_BARDE);
         infligeBonusMalus(*cible, MALUS_BARDE);
-        break;
-      case(DUC):
-        production(**exec, monde, SERF, CROIX, 1);
-        (*exec)->att = min((*exec)->att - 1, 1);
         break;
       default:
         break;

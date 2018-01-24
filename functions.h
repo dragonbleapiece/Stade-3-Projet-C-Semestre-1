@@ -277,7 +277,7 @@ void upSainte(Unite *unite);
 
 void upMatriarche(Unite *unite);
 
-void reinitialiseBonusMalus(Unite **tab, int length);
+void reinitialiseBonusMalus(UListe *uliste);
 
 void evolution(UListe uliste, Monde monde);
 
@@ -318,5 +318,9 @@ Unite **creerSelectionGenre(UListe uliste, Genre genre, int *n);
 int aPerduChampion(UListe uliste);
 
 UListe *getUListeAdverse(Couleur couleur, Monde *monde);
+
+int nbGenreAPortee(Unite unite, Monde monde, int portee, Genre genre, int alliee, Forme forme);
+
+void afficherInfoGenre(Genre genre);
 
 #endif /* FUNCTIONS_H_INCLUDED */
