@@ -43,6 +43,7 @@ Unite *creerUnite(Genre genre, UListe *uliste, int nTour) {
     initialiseUnite(temp, genre, uliste->couleur, nTour);
     if(uliste->unites == NULL) {
       uliste->unites = temp;
+
     } else {
       temp->suiv = uliste->unites;
       uliste->unites = temp;
@@ -372,7 +373,6 @@ int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mou
       && !(destX == unite->posX && destY == unite->posY)
       && (abs(destX-(unite->posX)) + abs(destY-(unite->posY)) <= *mouvements)) /* On verifie que la destination existe et est vide et que c'est un déplacement strictement adjacent */
     {
-      printf("Deplacement\n");
       Coord depart, dest;
       Coord *tab;
       int r;
@@ -405,24 +405,24 @@ int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mou
 Coord *findPath(Coord depart, Coord dest, Monde monde) {
   int lengthX = nbDeplacement(depart, dest) + 2;
   int lengthY;
+  int pasX, pasY;
+  Coord **tab;
+  Coord *g;
   if(depart.x == dest.x || depart.y == dest.y) {
     lengthY = 1; /*un seul chemin possible*/
   } else {
     lengthY = (min(abs(depart.x - dest.x) + 1, abs(depart.y - dest.y) + 1) - 1) * max(abs(depart.x - dest.x) + 1, abs(depart.y - dest.y) + 1);
   }
-  printf("nombre de chemins %d\n", lengthY);
-  Coord **tab = calloc(lengthY, sizeof(*tab));
-  Coord *g;
+  tab = calloc(lengthY, sizeof(*tab));
 
-  int pasX = signe(dest.x - depart.x);
-  int pasY = signe(dest.y - depart.y);
+  pasX = signe(dest.x - depart.x);
+  pasY = signe(dest.y - depart.y);
 
   if(tab != NULL) {
     if(initialiseTab(tab, lengthX, lengthY) == 0) {
       return NULL;
     }
 
-    printf("findPath\n");
     construireTab(tab, depart, dest, 0, 0, pasX, pasY, monde, lengthY);
     g = goodPath(tab, lengthX, lengthY);
     free(tab);
@@ -458,7 +458,6 @@ void initialiseTabCoord(Coord *tab, size_t length) {
 void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX, int pasY, Monde monde, int lengthY) {
   Coord coord = debut;
   int indice;
-  printf("%d %d = %d,%d\n", i, j, coord.x, coord.y);
   for(indice = j; indice < lengthY; ++indice) {
     tab[j][i] = coord;
   }
@@ -479,7 +478,6 @@ void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX,
 }
 
 Coord *goodPath(Coord **tab, int lengthX, int lengthY) {
-  printf("GoodPath\n");
   int i, j;
   i = 1;
   while(i < lengthX && lengthY > 1) {
@@ -522,7 +520,6 @@ int executePath(Unite *unite, Coord *tab, Monde *monde) {
   int i = 1;
   int r;
   while(i < length && (r = deplacerUnite(unite, monde, tab[i].x, tab[i].y)) == 1) {
-    printf("%d, %d\n", tab[i].x, tab[i].y);
     ++i;
   }
   return r;
@@ -1295,7 +1292,7 @@ int actionAttaquer(Unite **unite, Monde *monde) {
         break;
     }
   if(*unite == NULL || (*unite)->etat == PARALYSIE || (*unite)->etat == ATTENTE) {
-    r = 0;
+    r = 3;
   }
 
   free(uportee);
@@ -1369,6 +1366,7 @@ int attaquer(Unite **exec, Unite **cible, int d, Monde *monde) {
 
 void combat(Unite **exec, Unite **cible, Monde *monde) {
   int fail = 0;
+  int success;
   int degats = (*exec)->att + (*exec)->B_att;
   int d;
 
@@ -1384,7 +1382,7 @@ void combat(Unite **exec, Unite **cible, Monde *monde) {
 
   d = attaquer(exec, cible, degats, monde);
 
-  int success = (d >= 0);
+  success = (d >= 0);
   if(!success && peutRiposter(**cible, **exec)) {
     fail = (attaquer(cible, exec, (*cible)->att + (*cible)->B_att, monde) >= 0);
   }

@@ -117,17 +117,19 @@ int nombreUnite(UListe uliste);
 */
 int parcourirUniteSelect(Unite **tab, int *length);
 
-/*Enleve une unite du tableau à l'indice voulu.
-  / tab : tableau des Unite* selectionnables
-  / indice : indice de l'unite que l'on veut enlever
+/*Enleve une case du tableau à l'indice voulu.
+  / tab : tableau
+  / indice : indice de la case que l'on veut enlever
   / length : taille du tableau
+  / size : taille du type ou de la structure sur lequel pointe le tableau
 */
 int enleverTab(void *tab, size_t indice, size_t length, size_t size);
 
-/*Decale les Unite* selectionnables vers size_t debut.
-  / tab : tableau des Unite* selectionnables
+/*Decale les les cases de tab vers size_t debut.
+  / tab : tableau
   / debut : indice vers laquelle les Unite* suivantes sont déplacées
   / length : taille du tableau
+  / size : taille du type ou de la structure sur lequel pointe le tableau
 */
 void decaleTab(void *tab, size_t debut, size_t length, size_t size);
 /*Unite *parcourirUnites(UListe uliste); BACKUP*/
@@ -185,46 +187,144 @@ int arreterPartie(Monde monde);
 */
 void gererPartie(void);
 
+/*Initialise les attributs d'une unite.
+  / *unite : pointeur vers l'unite que l'on veut initialiser
+  / genre : genre de l'unite
+  / couleur : couleur de l'unite
+  / nTour : n°tour de création de l'unité
+*/
 void initialiseUnite(Unite* unite, Genre genre, Couleur couleur, int nTour);
 
+/*Initialise les stats de l'unite selon son genre
+  / *unite : pointeur vers l'unite que l'on veut initialiser
+  / genre : genre de l'unite
+*/
 void initialiseStats(Unite *unite, Genre genre);
 
+/*Retourne un nombre aléatoire entre a et b exclu.
+  / a : nombre aléatoire minimum
+  / b : nombre aléatoire maximum + 1
+*/
 int rand_a_b(int a, int b);
 
+/*Retourne le nombre d'unites correspondant au genre recherché.
+  / uliste : liste du joueur dans laquelle on recherche le nombre d'unités
+  / genre : genre des unités recherchées
+*/
 int nombreGenre(UListe uliste, Genre genre);
 
+/*Deplace l'Unite vers la destination voulue si possible. Retourne -2 si il y a une erreur mémoire, -1 si un obstacle a été rencontré, 0 si le déplacement est impossible et 1 si le déplacement a été réussi.
+  / *unite : pointeur vers l'unite que l'on veut déplacer
+  / *monde : pointeur vers le monde dans lequel on bouge l'unite
+  / destX : destination en x
+  / destY : destination en Y
+  / *mouvements : pointeur vers le nombre de mouvements possibles
+*/
 int deplacerUniteAuto(Unite *unite, Monde *monde, int destX, int destY, int *mouvements);
 
+/*Retourne l'adresse d'allocation d'un tableau de coordonnées correspondant à l'itinéraire le plus valide vers la destination voulue. Rerourne NULL si l'allocation est impossible.
+  / depart : coordonnées de départ
+  / dest : coordonnées de destination
+  / monde : monde dans lequel l'itinéraire est créé
+*/
 Coord *findPath(Coord depart, Coord dest, Monde monde);
 
+/*Retourne le nombre de déplacement qu'il faut effectuer entre les coordonnées de départ et les coordonnées de destination.
+  / depart : coordonnées de départ
+  / dest : coordonnées de destination
+*/
 int nbDeplacement(Coord depart, Coord dest);
 
+/*Retourne le nombre de coordonnées se trouvant dans un tableau de coordonnées excluant les coordonnées de fin de tableau.
+  / *tab : tableau de coordonnées
+*/
 int nCoordTab(Coord *tab);
 
+/*Déplace l'Unite selon l'itinéraire donné.
+  / *unite : pointeur vers l'Unite que l'on veut déplacer
+  / *tab : tableau de coordonnées soit l'itinéraire
+  / *monde : pointeur vers le Monde dans lequel se déplace l'Unite
+*/
 int executePath(Unite *unite, Coord *tab, Monde *monde);
 
+/*Renvoie le signe de a. Retourne 1 s'il est positif, 0 s'il est nul, -1 s'il est négatif.
+  / a : nombre entier
+*/
 int signe(int a);
 
+/*Initialise le tableau des itinéraires selon la longueur en X et en Y. Retourne 0 si l'allocation a été impossible, retourne 1 sinon.
+  / **tab : tableau des itinéraires
+  / lengthX : taille en x du tableau
+  / lengthY : taille en y du tableau
+*/
 int initialiseTab(Coord **tab, size_t lengthX, size_t lengthY);
 
+/*Ajoute les différents itinéraires possibles au tableau des itinéraires. Fini l'itinéraire par les coordonnées -1;-1 si un obstacle est présent ou si la destination est atteinte.
+  / **tab : tableau des itinéraires
+  / debut : coordonnées de début
+  / dest : coordonnées de destination
+  / i : indice des coordonnées
+  / j : indice des itinéraires
+  / pasX : pas en x
+  / pasY : pas en y
+  / monde : monde dans lequel l'itinéraire se fait
+  / lengthY : taille du tableau tab
+*/
 void construireTab(Coord **tab, Coord debut, Coord dest, int i, int j, int pasX, int pasY, Monde monde, int lengthY);
 
+/*Retourne l'itinéraire ayant le plus de coordonnées.
+  / **tab : tableau des itinéraires
+  / lengthX : taille des itinéraires
+  / lengthY : taille du tableau tab
+*/
 Coord *goodPath(Coord **tab, int lengthX, int lengthY);
 
+/*Renvoie le minimum.
+  / a : nombre entier
+  / b : nombre entier
+*/
 int min(int a, int b);
 
+/*Renvoie le maximum.
+  / a : nombre entier
+  / b : nombre entier
+*/
 int max(int a, int b);
 
+/*Initialise les itinéraires aux coordonnées -1;-1.
+  / *tab : tableau de coordonnées
+  / length : taille du tableau
+*/
 void initialiseTabCoord(Coord *tab, size_t length);
 
+/*Demande les positions de destination du joueur et les execute si elles sont valides. Retourne 1 si le déplacement a été réussi, -1 si un obstacle a été rencontré, 0 si le déplacement est impossible ou -2 si l'allocation ne s'est pas faite.
+  / *unite : pointeur vers l'Unite que l'on veut déplacer
+  / *monde : pointeur vers le Monde où se déplace l'Unite
+  / *mouvements : le nombre de mouvements possibles
+*/
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements);
 
+/*Donne la sélection des unités que l'Unite peut attaquer. Retourne 2 si l'attaque a réussi, retourne 0 si rien n'est possible, retourne 3 si l'Unite qui a attaqué ne peut plus continuer de jouer.
+  / **unite : pointeur sur pointeur vers l'Unite que souhaite attaquer
+  / *monde : monde dans lequel l'Unite attaque
+*/
 int actionAttaquer(Unite **unite, Monde *monde);
 
+/*Execute le combat pour l'ARCHER.
+  / **exec : pointeur sur pointeur vers l'Unite attaquante
+  / **cible : pointeur sur pointeur vers l'Unite cible
+  / *monde : pointeur vers le Monde où se passe l'attaque
+*/
 void combat_Archer(Unite** exec, Unite **cible, Monde *monde);
 
+/*Inflige des dégats à l'Unite dans sa limite de PV. Retourne degats finaux - pv de l'Unite.
+  / **cible : pointeur sur pointeur vers l'Unite touchée
+  / degats : nombre de dégats subis
+  / *monde : pointeur sur le Monde dans lequel se trouve l'Unite
+*/
 int infligerDegats(Unite** cible, int degats, Monde *monde);
 
+/**/
 int attaquer(Unite** exec, Unite** cible, int d, Monde *monde);
 
 void combat(Unite** exec, Unite **cible, Monde *monde);
@@ -323,7 +423,7 @@ int nbGenreAPortee(Unite unite, Monde monde, int portee, Genre genre, int alliee
 
 void afficherInfoGenre(Genre genre);
 
-/*Purge le scanf. Résoud bug.*/
+/*Purge le scanf. Résout bug.*/
 void purge(void);
 
 #endif /* FUNCTIONS_H_INCLUDED */
