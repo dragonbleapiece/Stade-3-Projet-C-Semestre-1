@@ -484,7 +484,7 @@ Coord *goodPath(Coord **tab, int lengthX, int lengthY) {
   i = 1;
   while(i < lengthX && lengthY > 1) {
     j = 0;
-    while(j < lengthY) {
+    while(j < lengthY && lengthY > 1) {
       if(tab[j][i].x == -1) {
         free(tab[j]);
         lengthY = enleverTab(tab, j, lengthY, sizeof(*tab));
@@ -964,12 +964,12 @@ void afficherInfoGenre(Genre genre) {
       break;
     case(SERF):
       printf("Le SERF note '%s' est l'unite de base de presque toutes les unites.\n", symbol);
-      printf("Il a une faible attaque, subit un contrcoup quand il attaque, mais leur nombre permet d'augmenter le nombre d'ordres que le joueur peut donner a ses unites.\n");
+      printf("Il a une faible attaque, subit un contrecoup quand il attaque, mais leur nombre permet d'augmenter le nombre d'ordres que le joueur peut donner a ses unites.\n");
       break;
     case(MATRIARCHE):
       printf("La MATRIARCHE note '%s' est l'unite de production de SERFS.\n", symbol);
       printf("En 'attente' elle a 50%% de chance de produire un SERF a proximite si la place s'y prete.\n");
-      printf("Elle a de tres faibles stats. Mais peut se deplacer aupres de n'importe quelle unite alliee.\n");
+      printf("Elle a de tres faibles stats. Mais peut se teleporter aupres de n'importe quelle unite alliee sans utiliser plus d'un point de mouvement.\n");
       printf("Elle peut aussi paralyser une unite ennemie en l'attaquant. Mais elle subit le meme etat apres le combat.\n");
       printf("Elle a une portee de 3.\n");
       break;
@@ -1009,13 +1009,13 @@ void afficherInfoGenre(Genre genre) {
       break;
     case(SORCIERE):
       printf("La SORCIERE note '%s' est l'unite de soutien offensive.\n", symbol);
-      printf("A l'instar de la MATRIARCHE elle peut se deplacer pres d'une unite alliee.\n");
+      printf("A l'instar de la MATRIARCHE elle peut se teleporter pres d'une unite alliee.\n");
       printf("Sa puissance d'attaque equivaut a son attaque incremente de ses PV manquants. Elle se regenere du montant de degats infliges.\n");
       printf("En ordre d'attente, elle peut intervertir ses PV avec un allie proche.\n");
       break;
     case(SAINTE):
       printf("La SAINTE note '%s' est la seule unite de soin.\n", symbol);
-      printf("A l'instar de la MATRIARCHE elle peut se deplacer pres d'une unite alliee.\n");
+      printf("A l'instar de la MATRIARCHE elle peut se teleporter pres d'une unite alliee.\n");
       printf("En ordre d'attente elle soigne les allies proches du montant de son attaque.");
       break;
     default:
@@ -1683,11 +1683,12 @@ int rangeShape(int x, int y, int centerX, int centerY, int portee, Forme forme) 
 }
 
 int actionDeplacer(Unite *unite, Monde *monde, int *mouvements) {
-  int posX, posY, r = 1;
+  int posX, posY, scan, r = 1;
   Unite copie = *unite;
   printf("Indiquer positions x,y : ");
-  while(scanf("%d,%d", &posX, &posY) < 2) {
+  while((scan = scanf("%d,%d", &posX, &posY)) < 2) {
     printf("Coordonnees incorrectes !\n");
+    scan = scanf("%d,%d", &posX, &posY);
   }
   copie.posX = posX;
   copie.posY = posY;
